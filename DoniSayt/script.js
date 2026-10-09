@@ -1,49 +1,17 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
 const RESTAURANT_WHATSAPP = '79373231005';
-const menu = [
-  {id:1,name:'Самаркандский плов',cat:'Плов',price:550,weight:'450 г',desc:'Рассыпчатый рис с мясом, морковью и восточными специями',servingNote:'К ПЛОВУ БЕСПЛАТНО: ЛЕПЁШКА И САЛАТ ИЗ КАПУСТЫ (50 Г)',tag:'ХИТ',image:asset('restaurant-plov-hero.webp'),photo:true},
-  {id:2,name:'Баранья ножка',cat:'Вторые блюда',price:700,weight:'350 г',desc:'Томлёная баранья ножка с нежным пюре',image:asset('codex-clipboard-4f0581d2-d360-43f4-b783-721bb5d96eea.jpg')},
-  {id:3,name:'Курутоб',cat:'Вторые блюда',price:600,weight:'600 г',desc:'Таджикское блюдо из лепёшки фатир с курутом, зеленью, овощами и мясом',recipe:'Курут — сушёный солёный кисломолочный сыр — размачивают в воде до соуса. Им пропитывают кусочки лепёшки фатир и добавляют зелень и овощи. В версии DoniШеф блюдо подают с мясом.',image:asset('codex-clipboard-93cab4db-966f-4519-8c7b-c31c1e08551d.jpg')},
-  {id:4,name:'Форель с фри',cat:'Вторые блюда',price:800,weight:'350 г',desc:'Форель на гриле, картофель и свежий салат',image:asset('codex-clipboard-9942fb19-acb9-433f-9987-922204aa2484.jpg')},
-  {id:5,name:'Лагман',cat:'Первые блюда',price:500,weight:'400 г',desc:'Сытный суп с лапшой и мясом',image:asset('restaurant-lagman.webp'),photo:true},
-  {id:6,name:'Наггетсы с фри',cat:'Детское меню',price:500,weight:'250 г',desc:'Куриные наггетсы с картофелем фри',image:asset('restaurant-kids.webp'),photo:true},
-  {id:7,name:'Казан-кебаб · говядина',cat:'Вторые блюда',price:600,weight:'400 г',desc:'Нежная говядина с картофелем по-восточному',image:asset('codex-clipboard-212eb699-02ea-4007-a619-1a4bea8b73d0.jpg')},
-  {id:8,name:'Казан-кебаб · баранина',cat:'Вторые блюда',price:650,weight:'400 г',desc:'Баранина, картофель и ароматный лук',image:asset('codex-clipboard-b499d369-0ca4-49ef-a07e-b6d30f356a8c.jpg')},
-  {id:9,name:'Манты',cat:'Вторые блюда',price:550,weight:'300 г',desc:'Домашние манты со сметаной',tag:'ПОПУЛЯРНОЕ',image:asset('codex-clipboard-1ba49306-bbdf-42a0-9c37-b2e30605f665.jpg')},
-  {id:10,name:'Чахохбили с пюре',cat:'Вторые блюда',price:550,weight:'400 г',desc:'Курица в насыщенном соусе с пюре',image:asset('codex-clipboard-5c6b655c-e1c6-4541-98d1-32a0fc8fefa6.jpg')},
-  {id:11,name:'Котлеты с пюре',cat:'Вторые блюда',price:550,weight:'350 г',desc:'Домашние котлеты и картофельное пюре',image:asset('codex-clipboard-7227da99-1517-4677-8ea2-65a518cf4061.jpg')},
-  {id:12,name:'Мастава',cat:'Первые блюда',price:500,weight:'400 г',desc:'Ароматный томатный суп с мясом',image:asset('restaurant-shurpa.webp'),photo:true},
-  {id:15,name:'Пельмени',cat:'Первые блюда',price:500,weight:'350 г',desc:'Пельмени в прозрачном бульоне',image:asset('codex-clipboard-812e52f6-a1bb-4226-adb6-409bc1cd29c4.jpg')},
-  {id:16,name:'Чечевичный суп',cat:'Первые блюда',price:300,weight:'300 г',desc:'Нежный крем-суп с хрустящими гренками',image:asset('codex-clipboard-cdbfd1aa-65ed-4d00-858f-ddca54f41f9d.jpg')},
-  {id:17,name:'Плов от «Дони»',cat:'Плов',price:600,weight:'450 г',desc:'Фирменный плов DoniШеф с мясом и восточными специями',servingNote:'К ПЛОВУ БЕСПЛАТНО: ЛЕПЁШКА И САЛАТ ИЗ КАПУСТЫ (50 Г)',tag:'ФИРМЕННОЕ',image:asset('codex-clipboard-d1e7e094-41d7-4c46-91b1-37643d621b62.jpg')},
-  {id:27,name:'Самаркандский плов · 2 порции',cat:'Плов',price:1200,weight:'2 порции',desc:'Фирменный плов DoniШеф с мясом и восточными специями — две порции',servingNote:'К ПЛОВУ БЕСПЛАТНО: ЛЕПЁШКА И САЛАТ ИЗ КАПУСТЫ (50 Г)',image:asset('restaurant-plov-bowl.webp'),photo:true},
-  {id:20,name:'Картофель фри',cat:'Гарниры',price:150,weight:'150 г',desc:'Хрустящий золотистый картофель',image:asset('codex-clipboard-76e1df82-704e-49ea-90e4-d75cc3bba09b.jpg')},
-  {id:21,name:'Салат с баклажанами',cat:'Салаты',price:550,weight:'250 г',desc:'Овощи, баклажаны и хрустящий сыр',image:asset('restaurant-salad.webp'),photo:true},
-  {id:22,name:'Цезарь с курицей',cat:'Салаты',price:450,weight:'250 г',desc:'Куриное филе, салат, томаты и пармезан',image:asset('codex-clipboard-13c0ebca-21fc-4387-b8a7-fe8ab47c74d5.jpg')},
-  {id:23,name:'Самаркандский плов · полпорции',cat:'Полпорции',price:350,weight:'½ порции',desc:'Половина порции Самаркандского плова с мясом и восточными специями',servingNote:'К ПЛОВУ БЕСПЛАТНО: ЛЕПЁШКА И САЛАТ ИЗ КАПУСТЫ (50 Г)',image:asset('half-samarkand-plov.webp'),photo:true},
-  {id:24,name:'Бешбармак',cat:'Вторые блюда',price:800,weight:'Порция',desc:'Бешбармак с мясом, домашней лапшой и луком',image:asset('beshbarmak.webp'),photo:true},
-  {id:25,name:'Кёфта с фри',cat:'Вторые блюда',price:700,weight:'Порция',desc:'Кёфта на гриле с картофелем фри, зеленью и соусом',image:asset('kofta-fries.webp'),photo:true},
-  {id:26,name:'Шурпа · говядина',cat:'Первые блюда',price:500,weight:'400 г',desc:'Наваристый бульон с говядиной и овощами',image:asset('beef-shurpa.webp'),photo:true},
-  {id:28,name:'Лагман · полпорции',cat:'Полпорции',price:350,weight:'½ порции',desc:'Половина порции лагмана с лапшой и мясом',image:asset('restaurant-lagman.webp'),photo:true},
-  {id:29,name:'Мастава · полпорции',cat:'Полпорции',price:350,weight:'½ порции',desc:'Половина порции ароматной маставы с мясом',image:asset('restaurant-shurpa.webp'),photo:true},
-  {id:30,name:'Пельмени · полпорции',cat:'Полпорции',price:350,weight:'½ порции',desc:'Половина порции пельменей в прозрачном бульоне',image:asset('codex-clipboard-812e52f6-a1bb-4226-adb6-409bc1cd29c4.jpg')},
-  {id:31,name:'Шурпа · говядина · полпорции',cat:'Полпорции',price:350,weight:'½ порции',desc:'Половина порции наваристой шурпы с говядиной и овощами',image:asset('beef-shurpa.webp'),photo:true},
-  {id:32,name:'Жареный лагман',cat:'Вторые блюда',price:600,weight:'Порция',desc:'Лапша, обжаренная с мясом и овощами',image:asset('fried-lagman.webp'),photo:true},
-  {id:33,name:'Куриные крылышки на мангале',cat:'Мангал',price:450,weight:'Порция',desc:'Куриные крылышки, приготовленные на мангале',image:asset('shashlik-chicken-wings.webp'),photo:true},
-  {id:34,name:'Шашлык на мангале',cat:'Мангал',price:500,weight:'Порция',desc:'Шашлык с луком и соусом',image:asset('shashlik-meat.webp'),photo:true},
-  {id:35,name:'Картофель на мангале',cat:'Мангал',price:300,weight:'Порция',desc:'Картофель, приготовленный на мангале',image:asset('grill-potatoes.webp'),photo:true},
-  {id:36,name:'Бараньи рёбрышки',cat:'Мангал',price:500,weight:'Порция',desc:'Бараньи рёбрышки с овощами и соусом',image:asset('lamb-ribs.webp'),photo:true},
-  {id:37,name:'Куриный шашлык',cat:'Мангал',price:400,weight:'Порция',desc:'Куриное мясо, приготовленное на мангале',image:asset('chicken-shashlik.webp'),photo:true},
-  {id:38,name:'Шашлык с овощами',cat:'Мангал',price:450,weight:'Порция',desc:'Шашлык с овощами, приготовленный на мангале',image:asset('beef-shashlik.webp'),photo:true},
-  {id:39,name:'Люля-кебаб',cat:'Мангал',price:400,weight:'Порция',desc:'Люля-кебаб на мангале с овощами и соусом',image:asset('lula-kebab.webp'),photo:true},
-  {id:40,name:'RC Cola',cat:'Напитки',price:200,weight:'1 л',desc:'Газированный напиток',image:asset('rc-cola.webp'),photo:true},
-  {id:41,name:'Натахтари · вкус на выбор',cat:'Напитки',price:150,weight:'Бутылка',desc:'Лимонад Натахтари. Вкус уточняйте при заказе',image:asset('natakhtari.webp'),photo:true},
-  {id:42,name:'Ассорти тортов',cat:'Торты',price:300,weight:'Кусочек',desc:'Выбор тортов уточняйте при заказе',image:asset('assorted-cakes.webp'),photo:true},
-  {id:43,name:'Медовик',cat:'Торты',price:300,weight:'Кусочек',desc:'Медовый торт с нежным кремом',image:asset('medovik.webp'),photo:true},
-  {id:44,name:'Турецкая пахлава',cat:'Торты',price:300,weight:'Порция',desc:'Турецкая пахлава',image:asset('owner-desserts.webp'),photo:true}
-];
+let menu = window.DONISHEF_MENU_SEED.map(item => ({...item}));
+let supabaseClient = null;
+let serverMenuReady = false;
+try {
+  supabaseClient = window.createDoniSupabaseClient?.() || null;
+} catch (error) {
+  console.error('Не удалось подключить онлайн-базу DoniШеф.', error);
+}
+serverMenuReady = !supabaseClient;
 
 const fmt = value => `${value.toLocaleString('ru-RU')} ₽`;
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
 const complimentaryLavash = 'ЛЕПЁШКА В ПОДАРОК К КАЖДОМУ БЛЮДУ';
 const servingNoteFor = item => item.servingNote || (['Напитки', 'Торты', 'Салаты', 'Гарниры', 'Детское меню'].includes(item.cat) ? '' : complimentaryLavash);
 document.documentElement.classList.add('js');
@@ -91,24 +59,29 @@ const inquiryCards = {
 };
 const categoryOrder = ['Плов', 'Первые блюда', 'Вторые блюда', 'Мангал', 'Гарниры', 'Детское меню', 'Салаты', 'Полпорции', ...inquiryCategories, 'Торты', 'Напитки'];
 const categoryRank = new Map(categoryOrder.map((category, index) => [category, index]));
-const secondCourseOrder = new Map([24, 3, 4, 25, 32, 2, 7, 8, 9, 10, 11].map((id, index) => [id, index]));
-const availableCategories = new Set([...menu.map(item => item.cat), ...inquiryCategories]);
-const cats = ['Все', ...categoryOrder.filter(category => availableCategories.delete(category)), ...availableCategories];
+const secondCourseOrder = new Map(['Бешбармак', 'Курутоб', 'Форель с фри', 'Кёфта с фри', 'Жареный лагман', 'Баранья ножка', 'Казан-кебаб · говядина', 'Казан-кебаб · баранина', 'Манты', 'Чахохбили с пюре', 'Котлеты с пюре'].map((name, index) => [name, index]));
 const grid = document.getElementById('menuGrid');
 const categories = document.getElementById('categories');
 const search = document.getElementById('search');
 const empty = document.getElementById('empty');
 let activeCat = 'Все';
 let cart = [];
+let cats = [];
+function renderCategories() {
+  const availableCategories = new Set([...menu.map(item => item.cat), ...inquiryCategories]);
+  cats = ['Все', ...categoryOrder.filter(category => availableCategories.delete(category)), ...availableCategories];
+  if (activeCat !== 'Все' && !cats.includes(activeCat)) activeCat = 'Все';
+  categories.innerHTML = cats.map(cat => `<button type="button" class="category ${cat === activeCat ? 'active' : ''}" data-cat="${escapeHtml(cat)}" aria-pressed="${cat === activeCat}">${escapeHtml(categoryNames[cat] || cat)}</button>`).join('');
+}
 try {
   const savedCart = JSON.parse(localStorage.getItem('donishef-cart') || '[]');
   if (!Array.isArray(savedCart)) throw new TypeError('Сохранённая корзина должна быть списком.');
-  cart = savedCart.filter(row => row && Number.isInteger(row.id) && Number.isSafeInteger(row.qty) && row.qty > 0 && menu.some(item => item.id === row.id));
+  cart = supabaseClient ? [] : savedCart.filter(row => row && Number.isInteger(row.id) && Number.isSafeInteger(row.qty) && row.qty > 0 && menu.some(item => item.id === row.id));
 } catch (error) {
   console.error('Не удалось загрузить сохранённую корзину.', error);
 }
 
-categories.innerHTML = cats.map(cat => `<button type="button" class="category ${cat === 'Все' ? 'active' : ''}" data-cat="${cat}" aria-pressed="${cat === 'Все'}">${categoryNames[cat] || cat}</button>`).join('');
+renderCategories();
 search.setAttribute('aria-label', 'Найти блюдо в меню');
 empty.setAttribute('role', 'status');
 categories.addEventListener('click', event => { const button = event.target.closest('.category'); if (!button) return; activeCat = button.dataset.cat; document.querySelectorAll('.category').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-pressed', String(item === button)); }); renderMenu(); });
@@ -132,14 +105,14 @@ function renderMenu() {
       const categoryDifference = activeCat === 'Все' ? categoryRank.get(first.cat) - categoryRank.get(second.cat) : 0;
       if (categoryDifference) return categoryDifference;
       if (first.cat !== 'Вторые блюда') return 0;
-      return secondCourseOrder.get(first.id) - secondCourseOrder.get(second.id);
+      return (secondCourseOrder.get(first.name) ?? secondCourseOrder.size) - (secondCourseOrder.get(second.name) ?? secondCourseOrder.size);
     });
   }
   const portionNote = document.getElementById('portionNote');
   portionNote.hidden = activeCat !== 'Полпорции' || items.length === 0;
   empty.style.display = items.length ? 'none' : 'block';
   empty.textContent = 'Не нашли такое блюдо. Попробуйте другое название.';
- grid.innerHTML = items.map(item => `<article class="menu-card reveal visible">${item.tag ? `<span class="tag">${item.tag}</span>` : ''}<div class="food-image${item.photo ? ' real-photo' : ''}"><button class="food-photo-trigger" type="button" data-detail-id="${item.id}" aria-label="Подробнее о блюде «${item.name}»"><img class="${item.photo ? 'photo-real' : ''}" src="${item.image}" alt="${item.name}" loading="lazy"></button></div><div class="menu-info"><h3>${item.name}</h3>${servingNoteFor(item) ? `<p class="menu-included">${servingNoteFor(item)}</p>` : ''}<p>${item.desc} · ${item.weight}</p> <div class="menu-bottom"><span class="price">${fmt(item.price)}</span><button class="add" data-id="${item.id}" aria-label="Добавить одну порцию ${item.name} в корзину">+</button></div></div></article>`).join('');
+ grid.innerHTML = items.map(item => `<article class="menu-card reveal visible">${item.tag ? `<span class="tag">${escapeHtml(item.tag)}</span>` : ''}<div class="food-image${item.photo ? ' real-photo' : ''}"><button class="food-photo-trigger" type="button" data-detail-id="${item.id}" aria-label="Подробнее о блюде «${escapeHtml(item.name)}»"><img class="${item.photo ? 'photo-real' : ''}" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy"></button></div><div class="menu-info"><h3>${escapeHtml(item.name)}</h3>${servingNoteFor(item) ? `<p class="menu-included">${escapeHtml(servingNoteFor(item))}</p>` : ''}<p>${escapeHtml(item.desc)} · ${escapeHtml(item.weight)}</p> <div class="menu-bottom"><span class="price">${fmt(item.price)}</span><button class="add" data-id="${item.id}" aria-label="Добавить одну порцию ${escapeHtml(item.name)} в корзину"${serverMenuReady ? '' : ' disabled'}>+</button></div></div></article>`).join('');
 }
 const dishModal = document.createElement('div');
 dishModal.className = 'modal dish-modal';
@@ -172,6 +145,7 @@ function openDishModal(id, trigger) {
  recipe.querySelector('p').textContent = selectedDish.recipe || '';
  dishModal.querySelector('.dish-modal-weight').textContent = selectedDish.weight;
  dishModal.querySelector('.dish-modal-price').textContent = fmt(selectedDish.price);
+ dishModal.querySelector('.dish-modal-actions button').disabled = !serverMenuReady;
  dishModal.classList.add('show');
  dishModal.querySelector('.modal-close').focus();
 }
@@ -248,7 +222,7 @@ grid.addEventListener('click', event => {
   const button = event.target.closest('.add');
   if (button) addToCart(Number(button.dataset.id));
 });
-function addToCart(id) { const row = cart.find(item => item.id === id); row ? row.qty++ : cart.push({id, qty: 1}); saveCart(); }
+function addToCart(id) { if (!serverMenuReady) return; const row = cart.find(item => item.id === id); row ? row.qty++ : cart.push({id, qty: 1}); saveCart(); }
 function saveCart() {
   try {
     localStorage.setItem('donishef-cart', JSON.stringify(cart));
@@ -315,8 +289,17 @@ document.getElementById('clearCart').onclick = () => { cart = []; saveCart(); };
 
 const modal = document.getElementById('orderModal');
 const checkoutButton = document.getElementById('checkout');
-const phoneInput = document.querySelector('[name="phone"]');
+const orderForm = document.getElementById('orderForm');
+const phoneInput = orderForm.elements.phone;
 const deliveryNote = document.getElementById('deliveryNote');
+orderForm.elements.name.maxLength = 120;
+orderForm.elements.address.maxLength = 300;
+orderForm.elements.comment.maxLength = 1000;
+const adminSetupNotice = document.createElement('p');
+adminSetupNotice.className = 'form-note admin-setup-notice';
+adminSetupNotice.textContent = 'Онлайн-учёт заявок пока не подключён: заказы можно отправить в WhatsApp/MAX, но они не появятся в панели владельца.';
+adminSetupNotice.hidden = Boolean(supabaseClient);
+modal.querySelector('h2').after(adminSetupNotice);
 phoneInput.placeholder = '+7 (___) ___-__-__';
 phoneInput.value = '+7 (';
 phoneInput.inputMode = 'tel';
@@ -395,7 +378,46 @@ modal.addEventListener('keydown', event => {
     first.focus();
   }
 });
-document.getElementById('orderForm').addEventListener('submit', event => {
+function buildOrderMessage(data, savedOrder) {
+  const items = savedOrder?.items?.length
+    ? savedOrder.items.map(item => `• ${item.name} × ${item.quantity} — ${fmt(Number(item.price) * Number(item.quantity))}${item.serving_note ? `\n  ${item.serving_note}` : ''}`).join('\n')
+    : cart.map(row => {
+      const item = menu.find(entry => entry.id === row.id);
+      const servingNote = servingNoteFor(item);
+      return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
+    }).join('\n');
+  const total = savedOrder ? Number(savedOrder.total) : cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
+  const details = [
+    savedOrder?.id ? `Номер заказа: ${savedOrder.id}` : null,
+    `Получение: ${data.get('orderType')}`,
+    `Филиал: ${data.get('branch')}`,
+    data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
+    data.get('orderType') === 'Доставка' ? 'Доставка: Яндекс Доставка, оплачивается клиентом отдельно; стоимость уточняется перед подтверждением заказа.' : null,
+    `Комментарий: ${data.get('comment') || '—'}`
+  ].filter(Boolean).join('\n');
+  return `Новый заказ с сайта «DoniШеф»\n\n${items}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
+}
+async function saveRestaurantOrder(data) {
+  if (!supabaseClient) {
+    console.warn('Онлайн-панель не подключена: заказ не будет сохранён в базе.');
+    return null;
+  }
+  const {data: orderId, error} = await supabaseClient.rpc('create_restaurant_order', {
+    p_customer_name: data.get('name'),
+    p_phone: data.get('phone'),
+    p_order_type: data.get('orderType'),
+    p_branch: data.get('branch'),
+    p_address: data.get('address') || '',
+    p_comment: data.get('comment') || '',
+    p_items: cart.map(row => ({id: row.id, quantity: row.qty}))
+  });
+  if (error) throw error;
+  if (!orderId || typeof orderId.id !== 'string' || !Array.isArray(orderId.items) || !Number.isSafeInteger(Number(orderId.total))) {
+    throw new Error('База вернула некорректные данные сохранённого заказа.');
+  }
+  return orderId;
+}
+document.getElementById('orderForm').addEventListener('submit', async event => {
   if (!/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(phoneInput.value)) {
     event.preventDefault();
     updatePhoneValidity();
@@ -405,6 +427,8 @@ document.getElementById('orderForm').addEventListener('submit', event => {
   }
   event.preventDefault();
   const data = new FormData(event.target);
+  const submitButton = event.submitter;
+  if (submitButton) submitButton.disabled = true;
   const order = cart.map(row => {
     const item = menu.find(entry => entry.id === row.id);
     const servingNote = servingNoteFor(item);
@@ -419,7 +443,17 @@ document.getElementById('orderForm').addEventListener('submit', event => {
     `Комментарий: ${data.get('comment') || '—'}`
   ].filter(Boolean).join('\n');
   const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
-  window.location.href = `https://wa.me/${RESTAURANT_WHATSAPP}?text=${encodeURIComponent(message)}`;
+  let savedOrder;
+  try {
+    savedOrder = await saveRestaurantOrder(data);
+  } catch (error) {
+    console.error('Не удалось сохранить заказ в онлайн-панели.', error);
+    window.alert('Не удалось сохранить заказ в панели владельца. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
+    if (submitButton) submitButton.disabled = false;
+    return;
+  }
+  const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
+  window.location.href = `https://wa.me/${RESTAURANT_WHATSAPP}?text=${encodeURIComponent(orderMessage)}`;
   cart = [];
   saveCart();
   modal.classList.remove('show');
@@ -433,6 +467,7 @@ const maxOrderButton = document.getElementById('orderViaMax');
 maxOrderButton.addEventListener('click', async () => {
   const orderForm = document.getElementById('orderForm');
   if (!orderForm.reportValidity()) return;
+  maxOrderButton.disabled = true;
   const data = new FormData(orderForm);
   const order = cart.map(row => {
     const item = menu.find(entry => entry.id === row.id);
@@ -450,15 +485,17 @@ maxOrderButton.addEventListener('click', async () => {
   const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
   const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
   try {
+    const savedOrder = await saveRestaurantOrder(data);
+    const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
     if (navigator.clipboard?.writeText) {
       try {
-        await navigator.clipboard.writeText(message);
+        await navigator.clipboard.writeText(orderMessage);
       } catch (error) {
         console.warn('Буфер обмена браузера отклонил запись; используем резервный способ.', error);
-        copyOrderWithSelection(message);
+        copyOrderWithSelection(orderMessage);
       }
     } else {
-      copyOrderWithSelection(message);
+      copyOrderWithSelection(orderMessage);
     }
     const status = document.getElementById('maxOrderStatus');
     status.textContent = maxWindow
@@ -466,8 +503,11 @@ maxOrderButton.addEventListener('click', async () => {
       : 'Заказ скопирован. Откройте MAX, найдите номер +7 919 154-52-32 и отправьте текст.';
     status.hidden = false;
   } catch (error) {
-    console.error('Не удалось скопировать заказ для MAX.', error);
-    window.alert('Не удалось скопировать заказ. Проверьте разрешение на буфер обмена и попробуйте ещё раз.');
+    console.error('Не удалось сохранить заказ или скопировать его для MAX.', error);
+    maxWindow?.close();
+    window.alert('Не удалось сохранить или скопировать заказ. Проверьте подключение и разрешение на буфер обмена, затем попробуйте ещё раз.');
+  } finally {
+    maxOrderButton.disabled = false;
   }
 });
 function copyOrderWithSelection(message) {
@@ -661,3 +701,55 @@ document.querySelectorAll('.video-card video').forEach(video => {
 });
 document.getElementById('mobileOrder').textContent = cart.length ? 'Корзина' : 'Заказать';
 renderMenu(); renderCart();
+const menuSyncStatus = document.createElement('p');
+menuSyncStatus.className = 'form-note menu-sync-status';
+menuSyncStatus.setAttribute('role', 'status');
+menuSyncStatus.hidden = true;
+grid.before(menuSyncStatus);
+async function loadMenuFromSupabase() {
+  if (!supabaseClient) return;
+  const {data, error} = await supabaseClient.from('menu_items').select('*').order('sort_order').order('id');
+  if (error) throw error;
+  if (!data.length) {
+    menu = [];
+    cart = [];
+    serverMenuReady = true;
+    renderCategories();
+    renderMenu();
+    renderCart();
+    empty.textContent = 'Онлайн-меню пока не заполнено. Владелец может загрузить исходный каталог через панель администратора.';
+    menuSyncStatus.textContent = 'Онлайн-каталог пока пуст. Владелец может загрузить исходное меню через панель администратора.';
+    menuSyncStatus.hidden = false;
+    return;
+  }
+  menu = data.map(row => {
+    const id = Number(row.id);
+    if (!Number.isSafeInteger(id)) throw new Error('В меню обнаружен некорректный идентификатор блюда.');
+    return {
+      id,
+      name: row.name,
+      cat: row.category,
+      price: row.price,
+      weight: row.weight,
+      desc: row.description,
+      image: row.image_url,
+      photo: row.photo,
+      tag: row.tag || '',
+      servingNote: row.serving_note || '',
+      recipe: row.recipe || ''
+    };
+  });
+  serverMenuReady = true;
+  cart = cart.filter(row => menu.some(item => item.id === row.id));
+  renderCategories();
+  renderMenu();
+  saveCart();
+  menuSyncStatus.hidden = true;
+}
+if (supabaseClient) {
+  loadMenuFromSupabase().catch(error => {
+    console.error('Не удалось загрузить меню из онлайн-базы.', error);
+    menuSyncStatus.textContent = 'Не удалось загрузить актуальное меню. Показан сохранённый каталог; проверьте подключение к онлайн-базе.';
+    menuSyncStatus.hidden = false;
+  });
+}
