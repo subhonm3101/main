@@ -23,14 +23,13 @@
     <section class="admin-login-card" id="loginScreen">
       <p class="eyebrow">ЗАЩИЩЁННЫЙ ДОСТУП</p>
       <h1>Панель владельца</h1>
-      <p class="admin-muted">Войдите, чтобы управлять заказами, клиентами и меню.</p>
+      <p class="admin-muted">Войдите, чтобы управлять заказами, клиентами, контактами ресторана и меню.</p>
       <form id="adminLoginForm">
         <label>Email<input type="email" name="email" autocomplete="username" required></label>
         <label>Пароль<input type="password" name="password" autocomplete="current-password" required></label>
         <button class="btn btn-primary full" type="submit">Войти</button>
       </form>
       <p class="admin-feedback" id="loginFeedback" role="status"></p>
-      <a class="admin-setup-link" href="SUPABASE_SETUP.md">Инструкция по подключению панели</a>
     </section>
 
     <section id="adminDashboard" hidden>
@@ -40,17 +39,19 @@
       </div>
       <p class="admin-feedback" id="dashboardFeedback" role="status" hidden></p>
       <div class="admin-stats" id="adminStats"></div>
+      <p class="admin-stats-note">Суммы не являются фактической выручкой и не включают отменённые заказы. Показатель «сегодня» рассчитывается по местному времени.</p>
       <nav class="admin-tabs" aria-label="Разделы панели">
         <button class="admin-tab active" type="button" data-tab="orders" aria-selected="true">Заказы</button>
         <button class="admin-tab" type="button" data-tab="clients" aria-selected="false">Клиенты</button>
+        <button class="admin-tab" type="button" data-tab="contacts" aria-selected="false">Контакты для звонков</button>
         <button class="admin-tab" type="button" data-tab="menu" aria-selected="false">Меню</button>
       </nav>
 
       <section class="admin-panel" id="ordersPanel">
-        <div class="admin-section-heading"><div><h2>Заказы</h2><p>Заявки с сайта; новые заказы сначала требуют подтверждения.</p></div>
-          <div class="admin-filters"><input id="orderSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск заказов"><select id="orderStatusFilter" aria-label="Фильтр по статусу"><option value="">Все статусы</option><option value="new">Новые</option><option value="confirmed">Подтверждены</option><option value="completed">Выполнены</option><option value="cancelled">Отменены</option></select></div>
+        <div class="admin-section-heading"><div><h2>Заказы</h2><p>Здесь отображаются заявки за весь период. Создание заявки на сайте не подтверждает, что клиент отправил сообщение в мессенджере. Свяжитесь с клиентом по телефону или через WhatsApp. WhatsApp/MAX не сообщает сайту, отправлено ли сообщение.</p></div>
+          <div class="admin-filters"><input id="orderSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск заказов"></div>
         </div>
-        <div class="admin-table-wrap"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Состав заказа</th><th>Сумма</th><th>Получение</th><th>Статус</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
+        <div class="admin-table-wrap"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Состав заказа</th><th>Сумма</th><th>Получение</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
         <p class="admin-empty" id="ordersEmpty" hidden>Заказов пока нет.</p>
       </section>
 
@@ -60,8 +61,26 @@
         <p class="admin-empty" id="clientsEmpty" hidden>Клиентов пока нет.</p>
       </section>
 
+      <section class="admin-panel" id="contactsPanel" hidden>
+        <div class="admin-section-heading"><div><h2>Контакты для звонков</h2><p>Измените телефон ресторана и номера, на которые клиенты отправляют заказы и заявки. Указывайте номера в международном формате, например +79191545232.</p></div></div>
+        <p class="admin-feedback" id="contactsFeedback" role="status" hidden></p>
+        <form class="admin-menu-form" id="contactsForm">
+          <div class="admin-form-grid">
+            <label>Телефон для звонков<input name="call_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79373231005" pattern="\+[1-9][0-9]{7,14}" required></label>
+            <label>WhatsApp<input name="whatsapp_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79373231005" pattern="\+[1-9][0-9]{7,14}" required></label>
+            <label>MAX<input name="max_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
+          </div>
+          <div class="admin-form-actions"><button class="btn btn-primary" type="submit">Сохранить контакты</button></div>
+        </form>
+        <div class="admin-socials">
+          <h3>Мы в социальных сетях</h3>
+          <a href="https://www.instagram.com/donishef_ufa/" target="_blank" rel="noopener">Instagram <span aria-hidden="true">↗</span></a>
+          <a href="https://t.me/donishef_ufa" target="_blank" rel="noopener">Telegram <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
       <section class="admin-panel" id="menuPanel" hidden>
-        <div class="admin-section-heading"><div><h2>Меню</h2><p>Цены и изменения сразу появятся на основном сайте.</p></div><div class="admin-menu-actions"><button class="btn btn-outline" id="importMenuButton" type="button" hidden>Загрузить исходное меню</button><button class="btn btn-primary" id="addMenuButton" type="button">Добавить блюдо</button></div></div>
+        <div class="admin-section-heading"><div><h2>Меню</h2><p>Цены и изменения сразу появятся на основном сайте. <span id="menuCount"></span></p><small class="admin-menu-duplicates" id="menuDuplicates" hidden></small></div><div class="admin-menu-actions"><button class="btn btn-outline" id="syncGrillButton" type="button">Обновить шашлыки</button><button class="btn btn-outline" id="importMenuButton" type="button" hidden>Загрузить исходное меню</button><button class="btn btn-primary" id="addMenuButton" type="button">Добавить блюдо</button></div></div>
         <p class="admin-feedback" id="menuFeedback" role="status" hidden></p>
         <form class="admin-menu-form" id="menuForm" hidden>
           <div class="admin-form-heading"><h3 id="menuFormTitle">Новое блюдо</h3><button class="admin-quiet-button" id="cancelMenuEdit" type="button">Отмена</button></div>

@@ -22,16 +22,21 @@
 .admin-title-row, .admin-section-heading, .admin-form-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .admin-title-row { margin-bottom: 26px; }
 .admin-title-row .btn, .admin-section-heading .btn { white-space: nowrap; }
-.admin-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 26px; }
+.admin-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 26px; }
 .admin-stat { padding: 19px 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--cream); }
-.admin-stat span { display: block; color: var(--muted); font-size: 12px; }
+.admin-stat span { display: block; min-height: 2.8em; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .admin-stat b { display: block; margin-top: 8px; font: 700 26px "Playfair Display", Georgia, serif; }
+.admin-stats-note { margin: -14px 0 24px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .admin-tabs { display: flex; gap: 8px; margin-bottom: 14px; padding-bottom: 10px; overflow-x: auto; border-bottom: 1px solid var(--line); }
 .admin-tab { padding: 10px 16px; border-radius: 6px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 800; white-space: nowrap; }
 .admin-tab.active { background: var(--dark); color: #fff; }
 .admin-panel { padding: 24px; border: 1px solid var(--line); border-radius: 9px; background: var(--cream); }
 .admin-section-heading { margin-bottom: 20px; }
 .admin-section-heading p { margin: 6px 0 0; }
+.admin-socials { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.admin-socials h3 { width: 100%; margin: 0; font-size: 16px; }
+.admin-socials a { color: var(--red); font-size: 13px; font-weight: 800; text-decoration: none; }
+.admin-menu-duplicates { display: block; margin-top: 5px; color: #963b2c; font-size: 12px; line-height: 1.5; }
 .admin-filters, .admin-menu-actions, .admin-form-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .admin-filters input { width: min(220px, 100%); }
 .admin-filters select { width: auto; min-width: 150px; }
@@ -44,8 +49,8 @@
 .admin-main td b { display: block; color: var(--ink); }
 .admin-main td small { display: block; color: var(--muted); }
 .admin-main td a { color: var(--red); font-weight: 700; }
+.admin-main td .admin-whatsapp-link { display: inline-block; margin-left: 10px; }
 .admin-order-items { margin: 0; padding-left: 17px; }
-.admin-main .admin-status-select { min-width: 145px; font-size: 12px; }
 .admin-empty { padding: 25px 10px; color: var(--muted); text-align: center; font-size: 13px; }
 .admin-menu-form { margin: 20px 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #f8f4ee; }
 .admin-form-heading { margin-bottom: 2px; }
@@ -68,7 +73,6 @@
   .admin-main { width: calc(100% - 28px); margin-top: 28px; }
   .admin-title-row, .admin-section-heading { align-items: stretch; flex-direction: column; }
   .admin-stats { grid-template-columns: 1fr 1fr; }
-  .admin-stats .admin-stat:last-child { grid-column: span 2; }
   .admin-panel { padding: 17px 12px; }
   .admin-menu-item { grid-template-columns: 48px minmax(110px, 1fr) auto; gap: 9px; }
   .admin-menu-item img { width: 48px; height: 48px; }

@@ -1,5 +1,6 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
-const RESTAURANT_WHATSAPP = '79373231005';
+let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
+let contactSettingsPromise = Promise.resolve();
 let menu = window.DONISHEF_MENU_SEED.map(item => ({...item}));
 let supabaseClient = null;
 let serverMenuReady = false;
@@ -12,6 +13,28 @@ serverMenuReady = !supabaseClient;
 
 const fmt = value => `${value.toLocaleString('ru-RU')} ₽`;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+const formatContactPhone = phone => phone.replace(/^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/, '+7 $1 $2-$3-$4');
+function applyRestaurantPhone() {
+  document.querySelectorAll('a[href^="tel:"]').forEach(link => {
+    if (link.href.endsWith('79373231005')) {
+      link.href = `tel:${restaurantContacts.call_phone}`;
+      if (link.textContent.includes('937') || link.textContent.includes('323-10-05')) {
+        link.textContent = formatContactPhone(restaurantContacts.call_phone);
+      }
+    }
+  });
+}
+function deduplicateMenuItems(items) {
+  const uniqueItems = new Map();
+  for (const item of items) {
+    const signature = JSON.stringify([
+      item.name, item.cat, item.price, item.weight, item.desc,
+      item.image, item.photo, item.tag, item.servingNote, item.recipe
+    ]);
+    if (!uniqueItems.has(signature)) uniqueItems.set(signature, item);
+  }
+  return [...uniqueItems.values()];
+}
 const complimentaryLavash = 'ЛЕПЁШКА В ПОДАРОК К КАЖДОМУ БЛЮДУ';
 const servingNoteFor = item => item.servingNote || (['Напитки', 'Торты', 'Салаты', 'Гарниры', 'Детское меню'].includes(item.cat) ? '' : complimentaryLavash);
 document.documentElement.classList.add('js');
@@ -93,7 +116,7 @@ function renderMenu() {
     document.getElementById('portionNote').hidden = true;
     grid.classList.add('inquiry-grid');
     const cards = inquiryCards[activeCat].cards.filter(card => !query || `${activeCat} ${card.title} ${card.description}`.toLowerCase().includes(query));
-    grid.innerHTML = cards.map(card => `<article class="menu-card inquiry-card${card.image ? ' inquiry-card-photo' : ''}">${card.image ? `<img src="${card.image}" alt="${card.alt}" loading="lazy">` : '<div class="inquiry-card-art" aria-hidden="true"><span>К ПРАЗДНИЧНОМУ СТОЛУ</span></div>'}<div class="menu-info"><h3>${card.title}</h3><p>${card.description}</p>${card.price ? `<span class="inquiry-price">${card.price}</span>` : ''}<a class="inquiry-phone" href="tel:+79373231005">Уточнить по телефону <span>→</span></a></div></article>`).join('');
+    grid.innerHTML = cards.map(card => `<article class="menu-card inquiry-card${card.image ? ' inquiry-card-photo' : ''}">${card.image ? `<img src="${card.image}" alt="${card.alt}" loading="lazy">` : '<div class="inquiry-card-art" aria-hidden="true"><span>К ПРАЗДНИЧНОМУ СТОЛУ</span></div>'}<div class="menu-info"><h3>${card.title}</h3><p>${card.description}</p>${card.price ? `<span class="inquiry-price">${card.price}</span>` : ''}<a class="inquiry-phone" href="tel:${escapeHtml(restaurantContacts.call_phone)}">Уточнить по телефону <span>→</span></a></div></article>`).join('');
     empty.style.display = cards.length ? 'none' : 'block';
     empty.textContent = 'Ничего не найдено. Попробуйте другое название.';
     return;
@@ -445,15 +468,16 @@ document.getElementById('orderForm').addEventListener('submit', async event => {
   const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
   let savedOrder;
   try {
+    await contactSettingsPromise;
     savedOrder = await saveRestaurantOrder(data);
   } catch (error) {
-    console.error('Не удалось сохранить заказ в онлайн-панели.', error);
-    window.alert('Не удалось сохранить заказ в панели владельца. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
+    console.error('Не удалось загрузить контакты или сохранить заказ.', error);
+    window.alert('Не удалось загрузить контакты ресторана или сохранить заказ. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
     if (submitButton) submitButton.disabled = false;
     return;
   }
   const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
-  window.location.href = `https://wa.me/${RESTAURANT_WHATSAPP}?text=${encodeURIComponent(orderMessage)}`;
+  window.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(orderMessage)}`;
   cart = [];
   saveCart();
   modal.classList.remove('show');
@@ -485,6 +509,7 @@ maxOrderButton.addEventListener('click', async () => {
   const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
   const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
   try {
+    await contactSettingsPromise;
     const savedOrder = await saveRestaurantOrder(data);
     const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
     if (navigator.clipboard?.writeText) {
@@ -499,8 +524,8 @@ maxOrderButton.addEventListener('click', async () => {
     }
     const status = document.getElementById('maxOrderStatus');
     status.textContent = maxWindow
-      ? 'Заказ скопирован. Найдите в MAX номер +7 919 154-52-32 и отправьте текст.'
-      : 'Заказ скопирован. Откройте MAX, найдите номер +7 919 154-52-32 и отправьте текст.';
+      ? `Заказ скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`
+      : `Заказ скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`;
     status.hidden = false;
   } catch (error) {
     console.error('Не удалось сохранить заказ или скопировать его для MAX.', error);
@@ -583,17 +608,30 @@ function buildBookingMessage() {
     `Пожелания: ${data.get('comment') || '—'}`
   ].join('\n');
 }
-document.getElementById('bookingViaWhatsApp').addEventListener('click', () => {
+document.getElementById('bookingViaWhatsApp').addEventListener('click', async () => {
   if (!bookingForm.reportValidity()) return;
   const message = buildBookingMessage();
-  const target = `https://wa.me/${RESTAURANT_WHATSAPP}?text=${encodeURIComponent(message)}`;
-  window.open(target, '_blank', 'noopener,noreferrer');
+  const targetWindow = window.open('about:blank', '_blank');
+  try {
+    await contactSettingsPromise;
+    if (!targetWindow) {
+      window.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+      return;
+    }
+    targetWindow.opener = null;
+    targetWindow.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+  } catch (error) {
+    console.error('Не удалось загрузить контакты для бронирования.', error);
+    targetWindow?.close();
+    window.alert('Не удалось загрузить контакты ресторана. Проверьте подключение к интернету и попробуйте снова.');
+  }
 });
 document.getElementById('bookingViaMax').addEventListener('click', async () => {
   if (!bookingForm.reportValidity()) return;
   const message = buildBookingMessage();
   const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
   try {
+    await contactSettingsPromise;
     if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(message);
@@ -606,12 +644,12 @@ document.getElementById('bookingViaMax').addEventListener('click', async () => {
     }
     const status = document.getElementById('bookingMaxStatus');
     status.textContent = maxWindow
-      ? 'Заявка скопирована. Найдите в MAX номер +7 919 154-52-32 и отправьте текст.'
-      : 'Заявка скопирована. Откройте MAX, найдите номер +7 919 154-52-32 и отправьте текст.';
+      ? `Заявка скопирована. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`
+      : `Заявка скопирована. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`;
     status.hidden = false;
   } catch (error) {
     console.error('Не удалось скопировать заявку на бронирование для MAX.', error);
-    window.alert('Не удалось скопировать заявку. Проверьте разрешение на буфер обмена и попробуйте ещё раз.');
+    window.alert('Не удалось загрузить контакты или скопировать заявку. Проверьте подключение и разрешение на буфер обмена, затем попробуйте ещё раз.');
   }
 });
 const orderType = document.getElementById('orderType');
@@ -722,7 +760,7 @@ async function loadMenuFromSupabase() {
     menuSyncStatus.hidden = false;
     return;
   }
-  menu = data.map(row => {
+  menu = deduplicateMenuItems(data.map(row => {
     const id = Number(row.id);
     if (!Number.isSafeInteger(id)) throw new Error('В меню обнаружен некорректный идентификатор блюда.');
     return {
@@ -738,7 +776,7 @@ async function loadMenuFromSupabase() {
       servingNote: row.serving_note || '',
       recipe: row.recipe || ''
     };
-  });
+  }));
   serverMenuReady = true;
   cart = cart.filter(row => menu.some(item => item.id === row.id));
   renderCategories();
@@ -747,6 +785,23 @@ async function loadMenuFromSupabase() {
   menuSyncStatus.hidden = true;
 }
 if (supabaseClient) {
+  contactSettingsPromise = supabaseClient.from('restaurant_contacts')
+    .select('call_phone,whatsapp_phone,max_phone')
+    .eq('id', true)
+    .single()
+    .then(({data, error}) => {
+      if (error) throw error;
+      if (!data || !/^\+[1-9]\d{7,14}$/.test(data.call_phone) || !/^\+[1-9]\d{7,14}$/.test(data.whatsapp_phone) || !/^\+[1-9]\d{7,14}$/.test(data.max_phone)) {
+        throw new Error('Контакты ресторана отсутствуют или имеют неверный формат.');
+      }
+      restaurantContacts = data;
+      applyRestaurantPhone();
+    });
+  contactSettingsPromise.catch(error => {
+    console.error('Не удалось загрузить контакты ресторана из онлайн-базы.', error);
+    adminSetupNotice.textContent = 'Не удалось загрузить контакты ресторана. Оформление заказа недоступно до восстановления подключения.';
+    adminSetupNotice.hidden = false;
+  });
   loadMenuFromSupabase().catch(error => {
     console.error('Не удалось загрузить меню из онлайн-базы.', error);
     menuSyncStatus.textContent = 'Не удалось загрузить актуальное меню. Показан сохранённый каталог; проверьте подключение к онлайн-базе.';
