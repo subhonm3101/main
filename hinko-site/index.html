@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ХИНКО — хинкали и халяль</title>
+<meta name="description" content="ХИНКО — кафе грузинской кухни: хинкали пяти видов, хачапури, харчо, хаши. Халяль.">
+<meta name="theme-color" content="#842719">
+<link rel="icon" href="img/logo.jpg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top" id="top">
+  <a class="brand" href="#top" aria-label="ХИНКО">
+    <img src="img/logo.jpg" alt="ХИНКО — хинкали, халяль" width="52" height="52">
+  </a>
+  <nav id="nav" aria-label="Разделы">
+    <a href="#menu">Меню</a>
+    <a href="#new">Новинки</a>
+    <a href="#kitchen">Кухня</a>
+    <a href="#contacts">Контакты</a>
+  </nav>
+  <div class="head-actions">
+    <a class="btn btn-gold head-cta" id="reserveHero" hidden></a>
+    <a class="btn head-order" id="headerCall" hidden></a>
+  </div>
+  <button class="burger" id="burger" aria-label="Меню" aria-expanded="false"><span></span><span></span></button>
+</header>
+
+<main>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-wrap">
+    <p class="eyebrow">Грузинская кухня · Уфа</p>
+    <h1>ХИНКО</h1>
+    <div class="hero-content">
+      <div class="hero-text">
+        <p class="tagline">Хинкали <i></i> Халяль</p>
+        <p class="lead">Лепим хинкали пяти видов, печём хачапури в печи и варим наваристые супы. Всё как в Грузии — только халяль.</p>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <figure class="hero-strip hero-strip-one">
+          <video src="video/oven.mp4" poster="video/oven.jpg" muted loop playsinline preload="none" data-lazy></video>
+        </figure>
+        <figure class="hero-strip hero-strip-two">
+          <video src="video/egg.mp4" poster="video/egg.jpg" muted loop playsinline preload="none" data-lazy></video>
+        </figure>
+        <figure class="hero-strip hero-strip-three">
+          <video src="video/khachapuri.mp4" poster="video/khachapuri.jpg" muted loop playsinline preload="none" data-lazy></video>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ribbon" aria-hidden="true">
+  <div class="ribbon-track">
+    <span>Хинкали</span><b>●</b><span>Халяль</span><b>●</b><span>Хачапури</span><b>●</b><span>Харчо</span><b>●</b><span>Хаши</span><b>●</b>
+    <span>Хинкали</span><b>●</b><span>Халяль</span><b>●</b><span>Хачапури</span><b>●</b><span>Харчо</span><b>●</b><span>Хаши</span><b>●</b>
+    <span>Хинкали</span><b>●</b><span>Халяль</span><b>●</b><span>Хачапури</span><b>●</b><span>Харчо</span><b>●</b><span>Хаши</span><b>●</b>
+  </div>
+</div>
+
+<!-- MENU -->
+<section class="section menu" id="menu">
+  <div class="wrap">
+    <p class="kicker">Что у нас вкусно</p>
+    <div class="menu-heading">
+      <h2>Меню</h2>
+      <div class="menu-flags" id="menuFlags" aria-hidden="true"></div>
+    </div>
+    <div class="filling-picker" id="fillingPicker"></div>
+    <div class="category-tabs" id="categoryTabs"></div>
+    <p class="menu-status" id="menuStatus" aria-live="polite"></p>
+    <div class="menu-grid" id="menuGrid"></div>
+  </div>
+</section>
+
+<!-- NEW -->
+<section class="section new" id="new">
+  <div class="wrap">
+    <p class="kicker light">Только появилось</p>
+    <h2 class="light">Новинки</h2>
+    <div class="stories">
+      <figure class="story"><img src="img/story-georgian.jpg" alt="Грузинский салат — новинка" loading="lazy"></figure>
+      <figure class="story"><img src="img/story-baklazhan.jpg" alt="Салат с хрустящим баклажаном — новинка" loading="lazy"></figure>
+      <figure class="story story-video">
+        <video src="video/khachapuri.mp4" poster="video/khachapuri.jpg" muted loop playsinline preload="none" data-lazy></video>
+        <figcaption class="script">хачапури горячий!</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- KITCHEN -->
+<section class="section kitchen" id="kitchen">
+  <div class="wrap kitchen-grid">
+    <div class="kitchen-copy">
+      <p class="kicker light">Кухня</p>
+      <h2 class="light">Из печи — сразу на стол</h2>
+      <p>Тесто, сыр, жёлток — и пара минут жара. Хачапури по-аджарски собираем при вас: лодочка из печи, яйцо в центр, кусочек масла сверху.</p>
+      <p class="muted">Вся кухня — халяль.</p>
+    </div>
+    <figure class="reel"><video src="video/egg.mp4" poster="video/egg.jpg" muted loop playsinline preload="none" data-lazy></video></figure>
+    <figure class="reel"><video src="video/oven.mp4" poster="video/oven.jpg" muted loop playsinline preload="none" data-lazy></video></figure>
+  </div>
+</section>
+
+<!-- ATMOSPHERE -->
+<section class="atmo" aria-label="Интерьер кафе">
+  <img src="img/interior.jpg" alt="Зал кафе ХИНКО" loading="lazy">
+  <div class="atmo-text">
+    <p class="script">приходите в гости</p>
+    <h2>Тёплый зал, мягкий свет и&nbsp;запах горячего хачапури</h2>
+  </div>
+</section>
+
+<section class="map-section" aria-label="Карта и маршрут">
+  <div class="wrap">
+    <div class="map-heading">
+      <div>
+        <p class="kicker" id="mapKicker"></p>
+        <h2 id="mapTitle"></h2>
+      </div>
+      <a class="btn btn-terra" id="yandexRoute" target="_blank" rel="noopener" hidden></a>
+    </div>
+    <div class="map-layout">
+      <div class="map-details">
+        <section class="map-detail-item">
+          <h3 class="map-detail-label" id="mapAddressLabel"></h3>
+          <p class="map-address" id="mapAddress"></p>
+        </section>
+        <section class="map-detail-item">
+          <h3 class="map-detail-label" id="mapPhoneLabel"></h3>
+          <a class="map-phone" id="mapPhone" hidden></a>
+        </section>
+        <section class="map-detail-item">
+          <h3 class="map-detail-label" id="mapHoursLabel"></h3>
+          <ul class="footer-hours map-hours" id="mapHours"></ul>
+        </section>
+      </div>
+      <iframe class="yandex-map" id="yandexMap" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="footer-grid" id="contacts">
+    <div class="footer-brand">
+      <img src="img/logo.jpg" alt="" width="56" height="56">
+      <strong id="footerName"></strong>
+      <p id="footerDescription"></p>
+      <p id="footerBrandLine"></p>
+      <p class="footer-address" id="footerAddress"></p>
+    </div>
+    <div class="footer-column">
+      <h2 id="footerNavTitle"></h2>
+      <nav class="footer-nav" id="footerNav" aria-label="Разделы сайта"></nav>
+    </div>
+    <div class="footer-column">
+      <h2 id="footerContactsTitle"></h2>
+      <ul class="footer-contacts" id="footerContacts"></ul>
+    </div>
+    <div class="footer-column footer-actions">
+      <h2 id="footerActionsTitle"></h2>
+      <a class="footer-route" id="footerOrder" target="_blank" rel="noopener noreferrer" hidden></a>
+      <a class="footer-route" id="twogisBtn" target="_blank" rel="noopener" hidden></a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <small>© <span id="year"></span> <span id="footerCopyrightName"></span></small>
+  </div>
+</footer>
+
+<button class="order-fab" id="orderFab" type="button" hidden></button>
+<dialog class="dish-dialog" id="dishDialog" aria-labelledby="dishDialogTitle" data-lenis-prevent>
+  <div id="dishDialogContent"></div>
+</dialog>
+<dialog class="order-dialog" id="orderDialog" aria-labelledby="orderDialogTitle" data-lenis-prevent>
+  <div id="orderDialogContent"></div>
+</dialog>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js" defer></script>
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
