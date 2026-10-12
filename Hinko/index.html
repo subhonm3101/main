@@ -17,6 +17,7 @@
   </a>
   <nav id="nav" aria-label="Разделы">
     <a href="#menu">Меню</a>
+<a href="#contest">Конкурс</a>
     <a href="#new">Новинки</a>
     <a href="#kitchen">Кухня</a>
     <a href="#contacts">Контакты</a>
@@ -77,6 +78,19 @@
   </div>
 </section>
 
+<!-- CONTEST -->
+<section class="section contest" id="contest" aria-labelledby="contestTitle" hidden>
+  <div class="wrap contest-box">
+    <p class="script" id="contestScript"></p>
+    <h2 id="contestTitle"></h2>
+    <p class="contest-lead" id="contestLead"></p>
+    <ol class="contest-steps" id="contestSteps"></ol>
+    <p class="contest-note" id="contestNote"></p>
+    <p class="contest-date"><span id="contestDateLabel"></span> <strong id="contestDate"></strong></p>
+    <a class="btn btn-terra" id="contestLink" target="_blank" rel="noopener noreferrer"></a>
+  </div>
+</section>
+
 <!-- NEW -->
 <section class="section new" id="new">
   <div class="wrap">
@@ -116,7 +130,7 @@
   </div>
 </section>
 
-<section class="map-section" aria-label="Карта и маршрут">
+<section class="map-section" id="contacts" aria-label="Карта и маршрут">
   <div class="wrap">
     <div class="map-heading">
       <div>
@@ -139,6 +153,11 @@
           <h3 class="map-detail-label" id="mapHoursLabel"></h3>
           <ul class="footer-hours map-hours" id="mapHours"></ul>
         </section>
+        <section class="map-detail-item find-us" id="findUs" hidden>
+          <h3 class="map-detail-label" id="findUsTitle"></h3>
+          <p class="map-address" id="findUsAddress"></p>
+          <ol class="find-steps" id="findUsSteps"></ol>
+        </section>
       </div>
       <iframe class="yandex-map" id="yandexMap" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
@@ -147,7 +166,7 @@
 </main>
 
 <footer class="foot">
-  <div class="footer-grid" id="contacts">
+  <div class="footer-grid">
     <div class="footer-brand">
       <img src="img/logo.jpg" alt="" width="56" height="56">
       <strong id="footerName"></strong>
@@ -163,10 +182,9 @@
       <h2 id="footerContactsTitle"></h2>
       <ul class="footer-contacts" id="footerContacts"></ul>
     </div>
-    <div class="footer-column footer-actions">
-      <h2 id="footerActionsTitle"></h2>
-      <a class="footer-route" id="footerOrder" target="_blank" rel="noopener noreferrer" hidden></a>
-      <a class="footer-route" id="twogisBtn" target="_blank" rel="noopener" hidden></a>
+    <div class="footer-column">
+      <h2 id="footerSocialsTitle"></h2>
+      <ul class="footer-socials" id="footerSocials"></ul>
     </div>
   </div>
   <div class="footer-bottom">

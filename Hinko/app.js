@@ -166,10 +166,12 @@
       var imageWrap = document.createElement('span');
       imageWrap.className = 'dish-img';
       var image = document.createElement('img');
-      image.src = dish.img;
-      image.alt = dish.name;
-      image.loading = 'lazy';
-      imageWrap.appendChild(image);
+      if (dish.img) {
+        image.src = dish.img;
+        image.alt = dish.name;
+        image.loading = 'lazy';
+        imageWrap.appendChild(image);
+      }
       var markers = document.createElement('span');
       markers.className = 'dish-markers';
       if (dish.hit) markers.appendChild(makeBadge(ui.hit, 'hit'));
@@ -311,7 +313,8 @@
     layout.className = 'dish-dialog-layout';
     var close = createButton('×', 'dialog-close', function(){ dishDialog.close(); }, ui.close);
     var image = document.createElement('img');
-    image.src = new URL(dish.img, document.baseURI).href;
+    if (dish.img) image.src = new URL(dish.img, document.baseURI).href;
+    else image.hidden = true;
     image.alt = dish.name;
     image.className = 'dish-dialog-image';
     image.addEventListener('error', function(){
@@ -350,7 +353,7 @@
         variantDescription.textContent = variant.desc || dish.desc || '';
         variantDescription.hidden = !variantDescription.textContent;
         image.style.objectPosition = variant.focus || 'center';
-      } else {
+      } else if (dish.img) {
         image.src = new URL(dish.img, document.baseURI).href;
         image.alt = dish.name;
         variantDescription.hidden = true;
@@ -419,14 +422,6 @@
     orderFab.setAttribute('aria-label', orderFab.textContent);
   }
   function renderOrderDialog(){
-    var previousName = orderDialogContent.querySelector('[name="customerName"]');
-    var previousPhone = orderDialogContent.querySelector('[name="customerPhone"]');
-    var previousPersonalConsent = orderDialogContent.querySelector('[name="personalConsent"]');
-    var previousTermsConsent = orderDialogContent.querySelector('[name="termsConsent"]');
-    var customerName = previousName ? previousName.value : '';
-    var customerPhone = previousPhone ? previousPhone.value : '';
-    var personalConsent = previousPersonalConsent ? previousPersonalConsent.checked : false;
-    var termsConsent = previousTermsConsent ? previousTermsConsent.checked : false;
     orderDialogContent.textContent = '';
     var head = document.createElement('div');
     head.className = 'order-dialog-head';
@@ -481,32 +476,6 @@
     var form = document.createElement('form');
     form.className = 'order-form';
     form.addEventListener('submit', submitOrder);
-    [
-      { name: 'customerName', type: 'text', placeholder: ui.namePlaceholder, autocomplete: 'name' },
-      { name: 'customerPhone', type: 'tel', placeholder: ui.phonePlaceholder, autocomplete: 'tel' }
-    ].forEach(function(field){
-      var label = document.createElement('label');
-      label.textContent = ui[field.name];
-      var input = document.createElement('input');
-      input.name = field.name;
-      input.type = field.type;
-      input.placeholder = field.placeholder;
-      input.autocomplete = field.autocomplete;
-      input.required = true;
-      input.setAttribute('aria-label', ui[field.name]);
-      input.value = field.name === 'customerName' ? customerName : (customerPhone || ui.phonePrefix || '');
-      if (field.name === 'customerPhone') {
-        input.inputMode = 'numeric';
-        input.maxLength = 12;
-        input.value = normalizePhone(input.value);
-        input.addEventListener('input', function(){
-          var normalized = normalizePhone(input.value);
-          if (input.value !== normalized) input.value = normalized;
-        });
-      }
-      label.appendChild(input);
-      form.appendChild(label);
-    });
     var status = document.createElement('p');
     status.className = 'order-status';
     status.setAttribute('role', 'status');
@@ -516,90 +485,9 @@
     submit.type = 'submit';
     submit.className = 'btn btn-terra order-submit';
     submit.textContent = ui.orderSubmit || ui.sendOrder;
-    submit.disabled = true;
-    var consentFields = createConsentFields(form, function(){
-      submit.disabled = cart.length === 0 || !personalConsent || !termsConsent || !hasLegalPages();
-      if (!hasLegalPages() && cart.length) status.textContent = ui.legalMissingMessage;
-      else if (status.textContent === ui.legalMissingMessage) status.textContent = '';
-    }, personalConsent, termsConsent);
-    personalConsent = consentFields.personal.checked;
-    termsConsent = consentFields.terms.checked;
-    consentFields.personal.addEventListener('change', function(){ personalConsent = consentFields.personal.checked; consentFields.update(); });
-    consentFields.terms.addEventListener('change', function(){ termsConsent = consentFields.terms.checked; consentFields.update(); });
-    consentFields.update();
+    submit.disabled = cart.length === 0;
     form.appendChild(submit);
     orderDialogContent.appendChild(form);
-  }
-  function hasLegalPages(){
-    return ['privacy', 'consent', 'offer'].every(function(key){ return getLegalHref(key) !== null; });
-  }
-  function getLegalHref(key){
-    var value = D.legalPages && D.legalPages[key];
-    if (typeof value !== 'string' || !value.trim()) return null;
-    try {
-      var protocol = new URL(value, window.location.href).protocol;
-      if (protocol === 'http:' || protocol === 'https:' || (protocol === 'file:' && window.location.protocol === 'file:')) return value;
-    } catch (error) {
-      console.error('Некорректная ссылка на юридический документ: ' + key, error);
-      return null;
-    }
-    console.error('Недопустимый протокол ссылки на юридический документ: ' + key);
-    return null;
-  }
-  function createConsentFields(form, onChange, personalChecked, termsChecked){
-    var wrap = document.createElement('div');
-    wrap.className = 'consent-fields';
-    var personal = document.createElement('input');
-    personal.type = 'checkbox';
-    personal.name = 'personalConsent';
-    personal.required = true;
-    personal.checked = Boolean(personalChecked);
-    var personalLabel = document.createElement('label');
-    personalLabel.className = 'consent-label';
-    personalLabel.appendChild(personal);
-    personalLabel.appendChild(document.createTextNode(ui.consentPersonal || 'Согласен на обработку персональных данных согласно '));
-    appendLegalLink(personalLabel, ui.consentPrivacy, 'privacy');
-    personalLabel.appendChild(document.createTextNode(')'));
-    var terms = document.createElement('input');
-    terms.type = 'checkbox';
-    terms.name = 'termsConsent';
-    terms.required = true;
-    terms.checked = Boolean(termsChecked);
-    var termsLabel = document.createElement('label');
-    termsLabel.className = 'consent-label';
-    termsLabel.appendChild(terms);
-    termsLabel.appendChild(document.createTextNode(ui.consentTerms || 'Принимаю условия '));
-    appendLegalLink(termsLabel, ui.consentAgreement, 'consent');
-    termsLabel.appendChild(document.createTextNode(' и '));
-    appendLegalLink(termsLabel, ui.consentOffer, 'offer');
-    wrap.appendChild(personalLabel);
-    wrap.appendChild(termsLabel);
-    form.appendChild(wrap);
-    function update(){
-      if (onChange) onChange();
-    }
-    return { personal: personal, terms: terms, update: update };
-  }
-  function appendLegalLink(parent, label, key){
-    var value = getLegalHref(key);
-    var link;
-    if (value) {
-      link = document.createElement('a');
-      link.href = value;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-    }
-    if (link) {
-      link.textContent = label;
-      parent.appendChild(link);
-    } else {
-      parent.appendChild(document.createTextNode(label));
-    }
-  }
-  function normalizePhone(value){
-    var digits = String(value || '').replace(/\D/g, '');
-    if (digits.charAt(0) === '7') digits = digits.slice(1);
-    return '+7' + digits.slice(0, 10);
   }
   function submitOrder(event){
     event.preventDefault();
@@ -608,18 +496,9 @@
       status.textContent = ui.emptyCartError;
       return;
     }
-    var number = String(D.whatsapp || '').replace(/\D/g, '');
+    var number = String(D.telegramPhone || '').replace(/\D/g, '');
     if (!/^\d{10,15}$/.test(number)) {
-      status.textContent = ui.whatsappUnavailable;
-      console.error('Номер WhatsApp не задан или имеет неверный формат.');
-      return;
-    }
-    var form = event.currentTarget;
-    var name = form.elements.customerName.value.trim();
-    var phone = form.elements.customerPhone.value.trim();
-    if (!/^\+7\d{10}$/.test(phone)) {
-      status.textContent = ui.phoneInvalid;
-      form.elements.customerPhone.focus();
+      status.textContent = ui.telegramUnavailable;
       return;
     }
     var lines = cart.map(function(entry){
@@ -630,17 +509,12 @@
       '',
       lines.join('\n'),
       '',
-      ui.total + ': ' + formatPrice(cartTotal()),
-      ui.customerName + ': ' + name,
-      ui.customerPhone + ': ' + phone
+      ui.total + ': ' + formatPrice(cartTotal())
     ].join('\n');
-    var url = 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
-    openWhatsApp(url, status);
-  }
-  function openWhatsApp(url, status){
+    var url = 'https://t.me/+' + number + '?text=' + encodeURIComponent(message);
     var popup = window.open(url, '_blank');
     if (!popup) {
-      status.textContent = ui.whatsappUnavailable;
+      status.textContent = ui.telegramUnavailable;
       return;
     }
     popup.opener = null;
@@ -665,9 +539,28 @@
     else if (orderDialog.open) orderDialog.close();
   });
 
-  /* ---- ссылки 2ГИС / рейтинг ---- */
-  if (D.twogis) $('twogisBtn').href = D.twogis;
-  $('mapKicker').textContent = ui.mapKicker || '';
+  var contest = D.contest;
+  if (contest && contest.title) {
+    $('contestScript').textContent = contest.script || '';
+    $('contestTitle').textContent = contest.title;
+    $('contestLead').textContent = contest.lead || '';
+    (contest.steps || []).forEach(function(step){
+      var li = document.createElement('li');
+      li.textContent = step;
+      $('contestSteps').appendChild(li);
+    });
+    $('contestNote').textContent = contest.note || '';
+    $('contestDateLabel').textContent = contest.dateLabel || '';
+    $('contestDate').textContent = contest.date || '';
+    if (D.instagram) {
+      $('contestLink').href = D.instagram;
+      $('contestLink').textContent = contest.linkLabel || '';
+    } else {
+      $('contestLink').hidden = true;
+    }
+    $('contest').hidden = false;
+  }
+  /* ---- ссылки 2ГИС / рейтинг ---- */  $('mapKicker').textContent = ui.mapKicker || '';
   $('mapTitle').textContent = ui.mapTitle || '';
   $('mapAddressLabel').textContent = ui.mapAddressLabel || '';
   $('mapPhoneLabel').textContent = ui.mapPhoneLabel || '';
@@ -679,6 +572,17 @@
     mapPhone.href = 'tel:' + D.phone.replace(/[^+\d]/g, '');
     mapPhone.textContent = D.phone;
     mapPhone.hidden = false;
+  }
+  var findUs = D.findUs;
+  if (findUs && findUs.steps && findUs.steps.length) {
+    $('findUsTitle').textContent = findUs.title || '';
+    $('findUsAddress').textContent = findUs.address || '';
+    findUs.steps.forEach(function(step){
+      var li = document.createElement('li');
+      li.textContent = step;
+      $('findUsSteps').appendChild(li);
+    });
+    $('findUs').hidden = false;
   }
   if (D.address) {
     var encodedAddress = encodeURIComponent(D.address);
@@ -695,7 +599,6 @@
   $('footerBrandLine').textContent = D.brandLine || '';
   $('footerNavTitle').textContent = ui.footerNavigation || '';
   $('footerContactsTitle').textContent = ui.footerContacts || '';
-  $('footerActionsTitle').textContent = ui.footerActions || '';
     var footerNav = $('footerNav');
     Array.prototype.forEach.call(document.querySelectorAll('#nav a'), function(link){
       footerNav.appendChild(link.cloneNode(true));
@@ -723,8 +626,7 @@
     var phoneHref = D.phone ? 'tel:' + D.phone.replace(/[^+\d]/g, '') : '';
     appendFooterContact(ui.footerPhone, D.phone, phoneHref, false);
     appendFooterContact(ui.footerEmail, D.email, D.email ? 'mailto:' + D.email : '', false);
-    appendFooterContact(ui.footerTelegram, D.telegram ? '@' + D.telegram.split('/').pop() : '', D.telegram, true);
-    appendFooterContact(ui.footerMap, D.twogis ? ui.footerRoute : '', D.twogis, true);
+    appendFooterContact(ui.footerTwogis, D.twogis ? ui.footerMap : '', D.twogis, true);
     var footerHours = $('mapHours');
     (D.hours || []).forEach(function(hours){
       var item = document.createElement('li');
@@ -746,20 +648,31 @@
       headerCall.textContent = ui.callAction || '';
       headerCall.hidden = false;
     }
-    if (D.whatsapp) {
-      var footerOrder = $('footerOrder');
-      var orderNumber = String(D.whatsapp).replace(/\D/g, '');
-      if (/^\d{10,15}$/.test(orderNumber)) {
-        footerOrder.textContent = ui.footerOrder || '';
-        footerOrder.href = 'https://wa.me/' + orderNumber + '?text=' + encodeURIComponent(ui.messageIntro || '');
-        footerOrder.hidden = false;
-      }
-    }
-    if (D.twogis) {
-      $('twogisBtn').textContent = ui.footerMap || '';
-      $('twogisBtn').hidden = false;
-    }
-
+    var socialIcons = {
+      instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>',
+      whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8c-.5 1-.3 2.3 1 3.8s2.8 2.3 4 2.3c.8 0 1.4-.6 1.5-1.2l-1.8-.9-.8.8c-.8-.3-2-1.4-2.3-2.3l.8-.8L10 8z" fill="currentColor"/></svg>',
+      telegram: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11l5 2 2 6 3-4 5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8 13 9-6" fill="none" stroke="currentColor" stroke-width="2"/></svg>'
+    };
+    var socials = $('footerSocials');
+    $('footerSocialsTitle').textContent = ui.footerSocials || '';
+    [
+      { key: 'instagram', label: 'Instagram', href: D.instagram },
+      { key: 'telegram', label: 'Telegram', href: D.telegram }
+    ].forEach(function(social){
+      if (!social.href) return;
+      var item = document.createElement('li');
+      var link = document.createElement('a');
+      link.href = social.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.className = 'social-link';
+      link.innerHTML = socialIcons[social.key];
+      var text = document.createElement('span');
+      text.textContent = social.label;
+      link.appendChild(text);
+      item.appendChild(link);
+      socials.appendChild(item);
+    });
   /* ---- флажки начинок из данных меню ---- */
   var flags = $('menuFlags');
   var fillings = (D.menu || []).filter(function(m){ return m.name === 'Хинкали'; })[0];
@@ -879,7 +792,7 @@
     var nowTime = Date.now();
     var speed = Math.abs(nowY - lastScrollY) / Math.max(1, nowTime - lastScrollTime);
     Array.prototype.forEach.call(strips, function(strip, index){
-      strip.style.setProperty('--parallax-y', (nowY * (index + 1) * .018).toFixed(1) + 'px');
+      strip.dataset.target = Math.min(nowY, 900) * (index + 1) * .012;
     });
     Array.prototype.forEach.call(stories, function(story, index){
       if (window.innerWidth <= 980) {
@@ -892,14 +805,23 @@
       story.style.setProperty('--fan-angle', ((index - 1) * 5 * progress).toFixed(2) + 'deg');
       story.style.setProperty('--fan-y', ((index - 1) * 22 * progress).toFixed(1) + 'px');
     });
-    if (ribbon) ribbon.style.setProperty('--ribbon-duration', Math.max(8, 32 / (1 + Math.min(speed / .45, 3))).toFixed(1) + 's');
     lastScrollY = nowY;
     lastScrollTime = nowTime;
-    clearTimeout(scrollReset);
-    scrollReset = setTimeout(function(){
-      if (ribbon) ribbon.style.setProperty('--ribbon-duration', '32s');
-    }, 180);
   }
+  var parallaxCurrent = [];
+  function easeParallax(){
+    if (!motionQuery.matches) {
+      Array.prototype.forEach.call(strips, function(strip, index){
+        var target = parseFloat(strip.dataset.target || '0');
+        var current = parallaxCurrent[index] || 0;
+        current += (target - current) * .06;
+        parallaxCurrent[index] = current;
+        strip.style.setProperty('--parallax-y', current.toFixed(2) + 'px');
+      });
+    }
+    window.requestAnimationFrame(easeParallax);
+  }
+  easeParallax();
   window.addEventListener('scroll', function(){
     if (!scrollFrame && !motionQuery.matches) {
       scrollFrame = true;
