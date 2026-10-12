@@ -850,5 +850,12 @@
   });
   nav.addEventListener('click', function(e){ if (e.target.tagName === 'A') { nav.classList.remove('open'); burger.setAttribute('aria-expanded', false); } });
 
+  document.querySelector('.brand').addEventListener('click', function(e){
+    e.preventDefault();
+    nav.classList.remove('open');
+    burger.setAttribute('aria-expanded', false);
+    if (lenisInstance) lenisInstance.scrollTo(0);
+    else window.scrollTo({ top: 0, behavior: motionQuery.matches ? 'auto' : 'smooth' });
+  });
   $('year').textContent = new Date().getFullYear();
 })();
