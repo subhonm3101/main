@@ -1,7 +1,7 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
 let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
 let contactSettingsPromise = Promise.resolve();
-let menu = window.DONISHEF_MENU_SEED.map(item => ({...item}));
+let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, available: item.available !== false}));
 let supabaseClient = null;
 let serverMenuReady = false;
 try {
@@ -13,6 +13,7 @@ serverMenuReady = !supabaseClient;
 
 const fmt = value => `${value.toLocaleString('ru-RU')} ₽`;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+const PRIVACY_POLICY_VERSION = '2026-10-v1';
 const formatContactPhone = phone => phone.replace(/^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/, '+7 $1 $2-$3-$4');
 function applyRestaurantPhone() {
   document.querySelectorAll('a[href^="tel:"]').forEach(link => {
@@ -29,14 +30,15 @@ function deduplicateMenuItems(items) {
   for (const item of items) {
     const signature = JSON.stringify([
       item.name, item.cat, item.price, item.weight, item.desc,
-      item.image, item.photo, item.tag, item.servingNote, item.recipe
+      item.image, item.photo, item.tag, item.servingNote, item.recipe, item.available !== false
     ]);
     if (!uniqueItems.has(signature)) uniqueItems.set(signature, item);
   }
   return [...uniqueItems.values()];
 }
-const complimentaryLavash = 'ЛЕПЁШКА В ПОДАРОК К КАЖДОМУ БЛЮДУ';
-const servingNoteFor = item => item.servingNote || (['Напитки', 'Торты', 'Салаты', 'Гарниры', 'Детское меню'].includes(item.cat) ? '' : complimentaryLavash);
+const servingNoteFor = item => item.servingNote && !/(бесплатно|подарок)/i.test(item.servingNote)
+  ? item.servingNote
+  : '';
 document.documentElement.classList.add('js');
 document.querySelectorAll('.logo').forEach(logo => {
   const name = logo.querySelector('.logo-name');
@@ -65,21 +67,8 @@ deliveryPhoto.src = asset('restaurant-plov-bowl.webp');
 deliveryPhoto.alt = 'Плов DoniШеф на традиционном блюде';
 deliveryPhoto.classList.add('photo-real');
 const categoryNames = {'Плов': 'Пловы', 'Первые блюда': 'Супы', Мангал: 'Шашлыки'};
-const inquiryCategories = ['Выпечка'];
-const inquiryCards = {
-  'Выпечка': {
-    cards: [
-      {
-        title: 'Самса с говядиной',
-        description: 'Самса с говядиной из галереи владельца в 2ГИС.',
-        image: asset('owner-beef-samsa.webp'),
-        alt: 'Самса с говядиной из галереи владельца в 2ГИС',
-        price: '120 ₽'
-      },
-      
-    ]
-  }
-};
+const inquiryCategories = [];
+const inquiryCards = {};
 const categoryOrder = ['Плов', 'Первые блюда', 'Вторые блюда', 'Мангал', 'Гарниры', 'Детское меню', 'Салаты', 'Полпорции', ...inquiryCategories, 'Торты', 'Напитки'];
 const categoryRank = new Map(categoryOrder.map((category, index) => [category, index]));
 const secondCourseOrder = new Map(['Бешбармак', 'Курутоб', 'Форель с фри', 'Кёфта с фри', 'Жареный лагман', 'Баранья ножка', 'Казан-кебаб · говядина', 'Казан-кебаб · баранина', 'Манты', 'Чахохбили с пюре', 'Котлеты с пюре'].map((name, index) => [name, index]));
@@ -135,14 +124,17 @@ function renderMenu() {
   portionNote.hidden = activeCat !== 'Полпорции' || items.length === 0;
   empty.style.display = items.length ? 'none' : 'block';
   empty.textContent = 'Не нашли такое блюдо. Попробуйте другое название.';
- grid.innerHTML = items.map(item => `<article class="menu-card reveal visible">${item.tag ? `<span class="tag">${escapeHtml(item.tag)}</span>` : ''}<div class="food-image${item.photo ? ' real-photo' : ''}"><button class="food-photo-trigger" type="button" data-detail-id="${item.id}" aria-label="Подробнее о блюде «${escapeHtml(item.name)}»"><img class="${item.photo ? 'photo-real' : ''}" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy"></button></div><div class="menu-info"><h3>${escapeHtml(item.name)}</h3>${servingNoteFor(item) ? `<p class="menu-included">${escapeHtml(servingNoteFor(item))}</p>` : ''}<p>${escapeHtml(item.desc)} · ${escapeHtml(item.weight)}</p> <div class="menu-bottom"><span class="price">${fmt(item.price)}</span><button class="add" data-id="${item.id}" aria-label="Добавить одну порцию ${escapeHtml(item.name)} в корзину"${serverMenuReady ? '' : ' disabled'}>+</button></div></div></article>`).join('');
+ grid.innerHTML = items.map(item => {
+   const quantity = cart.find(row => row.id === item.id)?.qty || 0;
+   return `<article class="menu-card reveal visible${item.available === false ? ' is-unavailable' : ''}">${item.tag ? `<span class="tag">${escapeHtml(item.tag)}</span>` : ''}<div class="food-image${item.photo ? ' real-photo' : ''}"><button class="food-photo-trigger" type="button" data-detail-id="${item.id}" aria-label="Подробнее о блюде «${escapeHtml(item.name)}»"><img class="${item.photo ? 'photo-real' : ''}" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy"></button></div><div class="menu-info"><h3>${escapeHtml(item.name)}</h3>${servingNoteFor(item) ? `<p class="menu-included">${escapeHtml(servingNoteFor(item))}</p>` : ''}<p>${escapeHtml(item.desc)} · ${escapeHtml(item.weight)}</p> <div class="menu-bottom"><span class="price">${fmt(item.price)}</span>${item.available === false ? '<span class="stock-unavailable">Нет в наличии</span>' : `<div class="menu-cart-controls"><button class="remove-from-cart" data-act="minus" data-id="${item.id}" aria-label="Убрать одну порцию ${escapeHtml(item.name)} из корзины"${quantity ? '' : ' disabled'}>−</button><span aria-label="Количество в корзине">${quantity}</span><button class="add" data-id="${item.id}" aria-label="Добавить одну порцию ${escapeHtml(item.name)} в корзину"${serverMenuReady ? '' : ' disabled'}>+</button></div>`}</div></div></article>`;
+ }).join('');
 }
 const dishModal = document.createElement('div');
 dishModal.className = 'modal dish-modal';
 dishModal.setAttribute('role', 'dialog');
 dishModal.setAttribute('aria-modal', 'true');
 dishModal.setAttribute('aria-labelledby', 'dishModalTitle');
-dishModal.innerHTML = '<div class="modal-box dish-modal-box"><button class="modal-close" type="button" aria-label="Закрыть">×</button><img class="dish-modal-image" alt=""><div class="dish-modal-copy"><p class="eyebrow">ИЗ МЕНЮ DONIШЕФ</p><h2 id="dishModalTitle"></h2><p class="dish-modal-included" hidden></p><p class="dish-modal-description"></p><section class="dish-modal-recipe" hidden><h3>Основа блюда</h3><p></p></section><span class="dish-modal-weight"></span><div class="dish-modal-actions"><b class="dish-modal-price"></b><button class="btn btn-primary" type="button">Добавить 1 порцию</button></div></div></div>';
+dishModal.innerHTML = '<div class="modal-box dish-modal-box"><button class="modal-close" type="button" aria-label="Закрыть">×</button><img class="dish-modal-image" alt=""><div class="dish-modal-copy"><p class="eyebrow">ИЗ МЕНЮ DONIШЕФ</p><h2 id="dishModalTitle"></h2><p class="dish-modal-included" hidden></p><p class="dish-modal-description"></p><section class="dish-modal-recipe" hidden><h3>Основа блюда</h3><p></p></section><span class="dish-modal-weight"></span><div class="dish-modal-actions"><b class="dish-modal-price"></b><button class="btn btn-primary" type="button">Добавить 1 порцию</button></div><p class="stock-unavailable dish-modal-stock" hidden>Временно нет в наличии</p></div></div>';
 document.body.append(dishModal);
 let dishReturnFocus;
 let selectedDish;
@@ -168,35 +160,43 @@ function openDishModal(id, trigger) {
  recipe.querySelector('p').textContent = selectedDish.recipe || '';
  dishModal.querySelector('.dish-modal-weight').textContent = selectedDish.weight;
  dishModal.querySelector('.dish-modal-price').textContent = fmt(selectedDish.price);
- dishModal.querySelector('.dish-modal-actions button').disabled = !serverMenuReady;
+ const addDishButton = dishModal.querySelector('.dish-modal-actions button');
+ addDishButton.disabled = !serverMenuReady || selectedDish.available === false;
+ addDishButton.textContent = selectedDish.available === false ? 'Нет в наличии' : 'Добавить 1 порцию';
+ dishModal.querySelector('.dish-modal-stock').hidden = selectedDish.available !== false;
  dishModal.classList.add('show');
  dishModal.querySelector('.modal-close').focus();
 }
 
 const branchMap = document.getElementById('branchMap');
 if (!branchMap) throw new Error('Не найдена область карты филиалов.');
-branchMap.setAttribute('aria-label', 'Карта филиалов DoniШеф в Уфе на 2ГИС');
-
-const mapOptions = {
- pos: {lat: 54.747514055472074, lon: 55.944442749023445, zoom: 13},
- opt: {city: 'ufa'},
- org: '70000001096901951,70000001081850665,70000001038941933'
-};
-const mapFrame = document.createElement('iframe');
-mapFrame.className = 'branch-map-frame';
-mapFrame.title = 'Карта филиалов DoniШеф в Уфе на 2ГИС';
-mapFrame.loading = 'lazy';
-mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
-mapFrame.src = `https://widgets.2gis.com/widget?type=firmsonmap&options=${encodeURIComponent(JSON.stringify(mapOptions))}`;
-
+branchMap.setAttribute('aria-label', 'Местоположение DoniШеф в Уфе на Яндекс Картах');
+const restaurantMapQuery = 'DoniШеф, Уфа';
 const mapFallback = document.createElement('a');
 mapFallback.className = 'map-fallback-link';
-mapFallback.href = 'https://2gis.ru/ufa/profiles/70000001096901951,70000001081850665,70000001038941933/center/55.944442749023445,54.747514055472074/zoom/13';
+mapFallback.href = `https://yandex.ru/maps/?text=${encodeURIComponent(restaurantMapQuery)}`;
 mapFallback.target = '_blank';
 mapFallback.rel = 'noopener';
-mapFallback.textContent = 'Не открывается карта? Открыть филиалы в 2ГИС ↗';
-
-branchMap.replaceChildren(mapFrame, mapFallback);
+mapFallback.textContent = 'Открыть Яндекс Карты без встраивания ↗';
+const mapConsentCard = document.createElement('div');
+mapConsentCard.className = 'map-consent-card';
+const mapDisclosure = document.createElement('p');
+mapDisclosure.textContent = 'Интерактивную карту предоставляет Яндекс. При её загрузке Яндекс получит технические данные браузера и сетевого соединения. Карта не загружается, пока вы не нажмёте кнопку.';
+const loadMapButton = document.createElement('button');
+loadMapButton.className = 'btn btn-primary';
+loadMapButton.type = 'button';
+loadMapButton.textContent = 'Загрузить карту Яндекса';
+mapConsentCard.append(mapDisclosure, loadMapButton);
+branchMap.replaceChildren(mapConsentCard, mapFallback);
+loadMapButton.addEventListener('click', () => {
+ const mapFrame = document.createElement('iframe');
+ mapFrame.className = 'branch-map-frame';
+ mapFrame.title = 'DoniШеф в Уфе — Яндекс Карты';
+ mapFrame.loading = 'lazy';
+ mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
+ mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(restaurantMapQuery)}&z=12`;
+ branchMap.replaceChildren(mapFrame, mapFallback);
+});
 
 dishModal.querySelector('.modal-close').addEventListener('click', closeDishModal);
 dishModal.addEventListener('click', event => {
@@ -244,8 +244,29 @@ grid.addEventListener('click', event => {
   }
   const button = event.target.closest('.add');
   if (button) addToCart(Number(button.dataset.id));
+  const removeButton = event.target.closest('.remove-from-cart');
+  if (removeButton) removeOneFromCart(Number(removeButton.dataset.id));
 });
-function addToCart(id) { if (!serverMenuReady) return; const row = cart.find(item => item.id === id); row ? row.qty++ : cart.push({id, qty: 1}); saveCart(); }
+function addToCart(id) {
+  if (!serverMenuReady) return;
+  const item = menu.find(entry => entry.id === id);
+  if (!item || item.available === false) {
+    window.alert('Это блюдо сейчас временно недоступно.');
+    return;
+  }
+  const row = cart.find(entry => entry.id === id);
+  row ? row.qty++ : cart.push({id, qty: 1});
+  saveCart();
+  renderMenu();
+}
+function removeOneFromCart(id) {
+  const row = cart.find(entry => entry.id === id);
+  if (!row) return;
+  row.qty--;
+  if (row.qty <= 0) cart = cart.filter(entry => entry !== row);
+  saveCart();
+  renderMenu();
+}
 function saveCart() {
   try {
     localStorage.setItem('donishef-cart', JSON.stringify(cart));
@@ -304,7 +325,7 @@ function renderCart() {
   mobileOrder.setAttribute('aria-label', count ? `Открыть корзину, ${count} товаров` : 'Перейти к меню');
   if (!cart.length) { itemsEl.innerHTML = '<div style="text-align:center;padding:65px 15px;color:#756961"><div style="font-size:42px">✦</div><h3>Корзина пуста</h3><p>Добавьте что-нибудь вкусное из меню.</p></div>'; document.getElementById('cartTotal').textContent = '0 ₽'; return; }
   let total = 0;
-  itemsEl.innerHTML = cart.map(row => { const item = menu.find(entry => entry.id === row.id); total += item.price * row.qty; return `<div class="cart-row"><div class="cart-icon"><img src="${item.image}" alt=""></div><div><h4>${item.name}</h4><small>${fmt(item.price)}</small><div class="qty"><button data-act="minus" data-id="${item.id}" aria-label="Убрать">−</button><b>${row.qty}</b><button data-act="plus" data-id="${item.id}" aria-label="Добавить">+</button></div></div><div class="cart-price">${fmt(item.price * row.qty)}</div></div>`; }).join('');
+  itemsEl.innerHTML = cart.map(row => { const item = menu.find(entry => entry.id === row.id); total += item.price * row.qty; return `<div class="cart-row"><div class="cart-icon"><img src="${item.image}" alt=""></div><div><h4>${item.name}</h4><small>${fmt(item.price)}${item.available === false ? ' · Нет в наличии' : ''}</small><div class="qty"><button data-act="minus" data-id="${item.id}" aria-label="Убрать">−</button><b>${row.qty}</b><button data-act="plus" data-id="${item.id}" aria-label="Добавить"${item.available === false ? ' disabled' : ''}>+</button></div></div><div class="cart-price">${fmt(item.price * row.qty)}</div></div>`; }).join('');
   document.getElementById('cartTotal').textContent = fmt(total);
 }
 document.getElementById('cartItems').addEventListener('click', event => { const button = event.target.closest('button'); if (!button) return; const row = cart.find(item => item.id === Number(button.dataset.id)); if (!row) return; button.dataset.act === 'plus' ? row.qty++ : row.qty--; if (row.qty <= 0) cart = cart.filter(item => item !== row); saveCart(); });
@@ -315,6 +336,32 @@ const checkoutButton = document.getElementById('checkout');
 const orderForm = document.getElementById('orderForm');
 const phoneInput = orderForm.elements.phone;
 const deliveryNote = document.getElementById('deliveryNote');
+function addPersonalDataConsent(form, insertBefore) {
+  const label = document.createElement('label');
+  label.className = 'personal-data-consent';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.name = 'personalDataConsent';
+  checkbox.required = true;
+  const text = document.createElement('span');
+  text.append('Я даю отдельное согласие на обработку персональных данных для ответа и оформления заявки. ');
+  const consentLink = document.createElement('a');
+  consentLink.href = 'personal-data-consent.html';
+  consentLink.target = '_blank';
+  consentLink.rel = 'noopener';
+  consentLink.textContent = 'Текст согласия';
+  const policyLink = document.createElement('a');
+  policyLink.href = 'privacy-policy.html';
+  policyLink.target = '_blank';
+  policyLink.rel = 'noopener';
+  policyLink.textContent = 'Политика обработки данных';
+  text.append(consentLink, ' · ', policyLink, '.');
+  label.append(checkbox, text);
+  form.insertBefore(label, insertBefore);
+  return checkbox;
+}
+addPersonalDataConsent(orderForm, orderForm.querySelector('button[type="submit"]'));
+orderForm.querySelector('button[type="submit"] span').textContent = 'Открыть WhatsApp с заказом';
 orderForm.elements.name.maxLength = 120;
 orderForm.elements.address.maxLength = 300;
 orderForm.elements.comment.maxLength = 1000;
@@ -415,10 +462,10 @@ function buildOrderMessage(data, savedOrder) {
     `Получение: ${data.get('orderType')}`,
     `Филиал: ${data.get('branch')}`,
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Доставка: Яндекс Доставка, оплачивается клиентом отдельно; стоимость уточняется перед подтверждением заказа.' : null,
+    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
     `Комментарий: ${data.get('comment') || '—'}`
   ].filter(Boolean).join('\n');
-  return `Новый заказ с сайта «DoniШеф»\n\n${items}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
+  return `Новый заказ с сайта «DoniШеф»\n\n${items}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nСогласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
 }
 async function saveRestaurantOrder(data) {
   if (!supabaseClient) {
@@ -432,7 +479,9 @@ async function saveRestaurantOrder(data) {
     p_branch: data.get('branch'),
     p_address: data.get('address') || '',
     p_comment: data.get('comment') || '',
-    p_items: cart.map(row => ({id: row.id, quantity: row.qty}))
+    p_items: cart.map(row => ({id: row.id, quantity: row.qty})),
+    p_personal_data_consent: data.get('personalDataConsent') === 'on',
+    p_privacy_policy_version: PRIVACY_POLICY_VERSION
   });
   if (error) throw error;
   if (!orderId || typeof orderId.id !== 'string' || !Array.isArray(orderId.items) || !Number.isSafeInteger(Number(orderId.total))) {
@@ -458,14 +507,21 @@ document.getElementById('orderForm').addEventListener('submit', async event => {
     return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
   }).join('\n');
   const total = cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
+  const unavailableItem = cart.find(row => menu.find(item => item.id === row.id)?.available === false);
+  if (unavailableItem) {
+    const itemName = menu.find(item => item.id === unavailableItem.id)?.name || 'Блюдо';
+    window.alert(`«${itemName}» сейчас на стопе. Удалите его из корзины, чтобы продолжить.`);
+    if (submitButton) submitButton.disabled = false;
+    return;
+  }
   const details = [
     `Получение: ${data.get('orderType')}`,
     `Филиал: ${data.get('branch')}`,
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Доставка: Яндекс Доставка, оплачивается клиентом отдельно; стоимость уточняется перед подтверждением.' : null,
+    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
     `Комментарий: ${data.get('comment') || '—'}`
   ].filter(Boolean).join('\n');
-  const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
+  const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nСогласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
   let savedOrder;
   try {
     await contactSettingsPromise;
@@ -488,6 +544,7 @@ document.getElementById('orderForm').addEventListener('submit', async event => {
   updateAddressRequirement();
 });
 const maxOrderButton = document.getElementById('orderViaMax');
+maxOrderButton.textContent = 'Скопировать заказ и открыть MAX';
 maxOrderButton.addEventListener('click', async () => {
   const orderForm = document.getElementById('orderForm');
   if (!orderForm.reportValidity()) return;
@@ -499,11 +556,18 @@ maxOrderButton.addEventListener('click', async () => {
     return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
   }).join('\n');
   const total = cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
+  const unavailableItem = cart.find(row => menu.find(item => item.id === row.id)?.available === false);
+  if (unavailableItem) {
+    const itemName = menu.find(item => item.id === unavailableItem.id)?.name || 'Блюдо';
+    window.alert(`«${itemName}» сейчас на стопе. Удалите его из корзины, чтобы продолжить.`);
+    maxOrderButton.disabled = false;
+    return;
+  }
   const details = [
     `Получение: ${data.get('orderType')}`,
     `Филиал: ${data.get('branch')}`,
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Доставка: Яндекс Доставка, оплачивается клиентом отдельно; стоимость уточняется перед подтверждением.' : null,
+    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
     `Комментарий: ${data.get('comment') || '—'}`
   ].filter(Boolean).join('\n');
   const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
@@ -549,6 +613,9 @@ function copyOrderWithSelection(message) {
 }
 const bookingModal = document.getElementById('bookingModal');
 const bookingForm = document.getElementById('bookingForm');
+addPersonalDataConsent(bookingForm, bookingForm.querySelector('.booking-submit-actions'));
+document.getElementById('bookingViaWhatsApp').querySelector('span').textContent = 'Открыть WhatsApp с заявкой';
+document.getElementById('bookingViaMax').textContent = 'Скопировать заявку и открыть MAX';
 const bookingPhoneInput = bookingForm.elements.phone;
 const closeBookingButton = document.getElementById('closeBookingModal');
 let bookingReturnFocus;
@@ -599,13 +666,14 @@ function buildBookingMessage() {
   const guests = Number(data.get('guests'));
   if (!Number.isInteger(guests) || guests < 1 || guests > 100) throw new RangeError('Количество гостей должно быть от 1 до 100.');
   return [
-    'Здравствуйте! Хочу забронировать отдельный зал для безалкогольного банкета.',
+    'Здравствуйте! Хочу оставить заявку на бронирование. Подскажите, пожалуйста, доступность и условия.',
     `Имя: ${data.get('name')}`,
     `Телефон: ${data.get('phone')}`,
     `Количество гостей: ${guests}`,
     `Дата: ${data.get('date')}`,
     `Время начала: ${data.get('time')}`,
-    `Пожелания: ${data.get('comment') || '—'}`
+    `Пожелания: ${data.get('comment') || '—'}`,
+    `Согласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.`
   ].join('\n');
 }
 document.getElementById('bookingViaWhatsApp').addEventListener('click', async () => {
@@ -695,28 +763,6 @@ document.addEventListener('keydown', event => {
   else if (cartEl.classList.contains('open')) closeCart();
   setMenuOpen(false);
 });
-const hoursLabel = document.querySelector('.hours span');
-const hoursStatus = document.querySelector('.hours b');
-hoursStatus.setAttribute('aria-live', 'polite');
-function updateOpeningHours() {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Yekaterinburg',
-    hour: '2-digit',
-    minute: '2-digit',
-    weekday: 'short',
-    hourCycle: 'h23'
-  }).formatToParts(new Date());
-  const hour = Number(parts.find(part => part.type === 'hour').value);
-  const weekday = parts.find(part => part.type === 'weekday').value;
-  const closingHour = weekday === 'Sun' ? 20 : 22;
-  const isOpen = hour >= 11 && hour < closingHour;
-  const statusText = isOpen ? `Открыто · до ${closingHour}:00` : `Закрыто · откроемся ${hour < 11 ? 'сегодня' : 'завтра'} в 11:00`;
-  if (hoursLabel.textContent !== 'Сейчас') hoursLabel.textContent = 'Сейчас';
-  hoursStatus.dataset.open = String(isOpen);
-  if (hoursStatus.textContent !== statusText) hoursStatus.textContent = statusText;
-}
-updateOpeningHours();
-window.setInterval(updateOpeningHours, 60_000);
 const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } }), {threshold:.12});
 document.querySelectorAll('.reveal').forEach(element => observer.observe(element));
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -774,7 +820,8 @@ async function loadMenuFromSupabase() {
       photo: row.photo,
       tag: row.tag || '',
       servingNote: row.serving_note || '',
-      recipe: row.recipe || ''
+      recipe: row.recipe || '',
+      available: row.available !== false
     };
   }));
   serverMenuReady = true;

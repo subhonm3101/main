@@ -7,9 +7,6 @@
   <meta name="theme-color" content="#f5f1ea">
   <title>Панель владельца — DoniШеф</title>
   <link rel="icon" type="image/webp" href="assets/brand-logo.webp">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="polish.css">
   <link rel="stylesheet" href="admin.css">
@@ -74,14 +71,15 @@
         </form>
         <div class="admin-socials">
           <h3>Мы в социальных сетях</h3>
-          <a href="https://www.instagram.com/donishef_ufa/" target="_blank" rel="noopener">Instagram <span aria-hidden="true">↗</span></a>
+          
           <a href="https://t.me/donishef_ufa" target="_blank" rel="noopener">Telegram <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
       <section class="admin-panel" id="menuPanel" hidden>
-        <div class="admin-section-heading"><div><h2>Меню</h2><p>Цены и изменения сразу появятся на основном сайте. <span id="menuCount"></span></p><small class="admin-menu-duplicates" id="menuDuplicates" hidden></small></div><div class="admin-menu-actions"><button class="btn btn-outline" id="syncGrillButton" type="button">Обновить шашлыки</button><button class="btn btn-outline" id="importMenuButton" type="button" hidden>Загрузить исходное меню</button><button class="btn btn-primary" id="addMenuButton" type="button">Добавить блюдо</button></div></div>
+        <div class="admin-section-heading"><div><h2>Меню</h2><p>Цены и изменения сразу появятся на основном сайте. Наличие каждого блюда можно переключить в списке. <span id="menuCount"></span></p></div><div class="admin-menu-actions"><button class="btn btn-primary" id="addMenuButton" type="button">Добавить блюдо</button></div></div>
         <p class="admin-feedback" id="menuFeedback" role="status" hidden></p>
+        <div class="admin-filters admin-menu-filters"><input id="menuSearch" type="search" placeholder="Найти блюдо по названию" aria-label="Поиск блюд по названию"></div>
         <form class="admin-menu-form" id="menuForm" hidden>
           <div class="admin-form-heading"><h3 id="menuFormTitle">Новое блюдо</h3><button class="admin-quiet-button" id="cancelMenuEdit" type="button">Отмена</button></div>
           <input type="hidden" name="id">
@@ -102,7 +100,7 @@
           <div class="admin-form-actions"><button class="btn btn-primary" type="submit">Сохранить блюдо</button><button class="btn btn-outline admin-delete-button" id="deleteMenuButton" type="button" hidden>Удалить блюдо</button></div>
         </form>
         <div class="admin-menu-list" id="menuList"></div>
-        <p class="admin-empty" id="menuEmpty" hidden>Блюд пока нет. Загрузите исходное меню или добавьте позицию.</p>
+        <p class="admin-empty" id="menuEmpty" hidden>Блюд не найдено.</p>
       </section>
     </section>
   </main>

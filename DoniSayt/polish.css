@@ -338,6 +338,12 @@ footer { padding: 42px 0; color: #ddd7ce; background: var(--dark); }
 .modal-box label[hidden] { display: none; }
 .modal-box input, .modal-box textarea { border-radius: 7px; }
 .form-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.menu-cart-controls { display: flex; align-items: center; gap: 8px; }
+.menu-cart-controls button { width: 36px; height: 36px; border-radius: 50%; font-size: 21px; line-height: 1; }
+.menu-cart-controls .add { background: var(--dark); color: #fff; }
+.menu-cart-controls .remove-from-cart { background: #e8ded0; color: var(--ink); }
+.menu-cart-controls .remove-from-cart:disabled { opacity: .4; cursor: not-allowed; }
+.menu-cart-controls span { min-width: 12px; text-align: center; font-size: 13px; font-weight: 700; }
 .delivery-note { margin: 16px 0 0; padding: 12px 14px; border-left: 3px solid #b43b32; border-radius: 0 5px 5px 0; background: #fff0ed; color: #a32d25; font-size: 15px; font-weight: 700; line-height: 1.55; }
 .delivery-note[hidden] { display: none; }
 .cart-bottom .delivery-note { margin: 0 0 14px; font-size: 13px; }

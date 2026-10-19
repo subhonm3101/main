@@ -6,7 +6,6 @@ let client = null;
 let orders = [];
 let menuItems = [];
 let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
-let menuDuplicateCount = 0;
 let editingMenuIds = [];
 
 function setFeedback(element, message, success = false) {
@@ -57,7 +56,8 @@ function menuRecord(item, index) {
     tag: item.tag || null,
     serving_note: item.servingNote || null,
     recipe: item.recipe || null,
-    sort_order: index
+    sort_order: index,
+    available: item.available !== false
   };
 }
 
@@ -65,7 +65,7 @@ async function refreshDashboard() {
   const feedback = $('#dashboardFeedback');
   setFeedback(feedback, '');
   const results = await Promise.allSettled([
-    fetchAllRows(() => client.from('orders').select('id,created_at,customer_name,phone,order_type,branch,address,comment,total,status,order_items(item_name,unit_price,quantity)').order('created_at', {ascending: false}).order('id')),
+    fetchAllRows(() => client.from('orders').select('id,created_at,customer_name,phone,order_type,branch,address,comment,total,status,personal_data_consent,privacy_policy_version,order_items(item_name,unit_price,quantity)').order('created_at', {ascending: false}).order('id')),
     fetchAllRows(() => client.from('menu_items').select('*').order('sort_order').order('id')),
     loadRestaurantContacts()
   ]);
@@ -78,7 +78,6 @@ async function refreshDashboard() {
   if (results[1].status === 'fulfilled') {
     const loadedMenu = results[1].value;
     menuItems = deduplicateMenuItems(loadedMenu);
-    menuDuplicateCount = loadedMenu.length - menuItems.length;
   }
   else {
     console.error('Не удалось загрузить меню.', results[1].reason);
@@ -133,13 +132,38 @@ function deduplicateMenuItems(items) {
   for (const item of items) {
     const signature = JSON.stringify([
       item.name, item.category, item.price, item.weight, item.description,
-      item.image_url, item.photo, item.tag, item.serving_note, item.recipe, item.sort_order
+      item.image_url, item.photo, item.tag, item.serving_note, item.recipe, item.sort_order, item.available !== false
     ]);
     const existing = uniqueItems.get(signature);
     if (existing) existing.duplicateIds.push(item.id);
     else uniqueItems.set(signature, {...item, duplicateIds: [item.id]});
   }
   return [...uniqueItems.values()];
+}
+
+async function setMenuAvailability(item, available) {
+  const buttons = [...$('#menuList').querySelectorAll(`[data-toggle-stock="${Number(item.id)}"]`)];
+  buttons.forEach(button => { button.disabled = true; });
+  setFeedback($('#menuFeedback'), available ? 'Ставим блюдо на стоп...' : 'Возвращаем блюдо в наличие...');
+  try {
+    const {data, error} = await client.from('menu_items')
+      .update({available})
+      .in('id', item.duplicateIds)
+      .select('id');
+    if (error) throw error;
+    if (!data || data.length !== item.duplicateIds.length) {
+      throw new Error('Supabase не обновил все копии блюда. Проверьте права владельца и повторите попытку.');
+    }
+    for (const menuItem of menuItems) {
+      if (item.duplicateIds.includes(menuItem.id)) menuItem.available = available;
+    }
+    renderMenu();
+    setFeedback($('#menuFeedback'), available ? `«${item.name}» снова доступно.` : `«${item.name}» поставлено на стоп.`, true);
+  } catch (error) {
+    console.error('Не удалось изменить наличие блюда.', error);
+    const detail = typeof error?.message === 'string' ? ` ${error.message}` : '';
+    setFeedback($('#menuFeedback'), `Не удалось изменить наличие.${detail}`);
+  }
 }
 
 function renderStats() {
@@ -150,6 +174,7 @@ function renderStats() {
     const createdAt = Date.parse(order.created_at);
     return createdAt >= todayStart && createdAt < tomorrowStart;
   });
+
   const nonCancelled = order => order.status !== 'cancelled';
   const sumOrders = rows => rows.filter(nonCancelled).reduce((sum, order) => sum + Number(order.total), 0);
   $('#adminStats').innerHTML = [
@@ -178,7 +203,7 @@ function renderOrders() {
       : '';
     return `<tr>
       <td>${escapeHtml(formatDate(order.created_at))}<small>№ ${escapeHtml(order.id.slice(0, 8))}</small></td>
-      <td><b>${escapeHtml(order.customer_name)}</b><a href="tel:${escapeHtml(order.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(order.phone)}</a>${whatsappLink}</td>
+      <td><b>${escapeHtml(order.customer_name)}</b><a href="tel:${escapeHtml(order.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(order.phone)}</a>${whatsappLink}<small>${order.personal_data_consent ? `Согласие получено · ${escapeHtml(order.privacy_policy_version || 'версия не указана')}` : 'Согласие не сохранено'}</small></td>
       <td><ul class="admin-order-items">${itemRows}</ul><small>${escapeHtml(order.branch)}${order.address ? ` · ${escapeHtml(order.address)}` : ''}${order.comment ? ` · ${escapeHtml(order.comment)}` : ''}</small></td>
       <td><b>${formatPrice(order.total)}</b></td>
       <td>${escapeHtml(order.order_type)}</td>
@@ -221,20 +246,18 @@ function renderClients() {
 function renderMenu() {
   const categories = [...new Set(menuItems.map(item => item.category))].sort((a, b) => a.localeCompare(b, 'ru'));
   $('#menuCategories').innerHTML = categories.map(category => `<option value="${escapeHtml(category)}"></option>`).join('');
-  $('#menuList').innerHTML = menuItems.map(item => `<article class="admin-menu-item">
+  const query = $('#menuSearch').value.trim().toLocaleLowerCase('ru-RU');
+  const visibleItems = menuItems.filter(item => item.name.toLocaleLowerCase('ru-RU').includes(query));
+  $('#menuList').innerHTML = visibleItems.map(item => `<article class="admin-menu-item${item.available === false ? ' is-unavailable' : ''}">
     <img src="${escapeHtml(item.image_url || 'assets/brand-logo.webp')}" alt="" loading="lazy">
     <div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.category)} · ${escapeHtml(item.weight || 'Вес не указан')}</small></div>
     <b class="admin-menu-price">${formatPrice(item.price)}</b>
+    <button class="admin-stock-button" type="button" data-toggle-stock="${Number(item.id)}" aria-pressed="${item.available !== false}" aria-label="${item.available === false ? 'Снять со стопа' : 'Поставить на стоп'}: ${escapeHtml(item.name)}">${item.available === false ? 'Убрать со стопа' : 'Поставить на стоп'}</button>
     <button class="admin-quiet-button" type="button" data-edit-menu="${Number(item.id)}">Изменить</button>
   </article>`).join('');
-  $('#menuEmpty').hidden = menuItems.length > 0;
-  $('#importMenuButton').hidden = menuItems.length > 0;
-  $('#menuCount').textContent = `Всего блюд: ${menuItems.length}.`;
-  const duplicates = $('#menuDuplicates');
-  duplicates.hidden = menuDuplicateCount === 0;
-  duplicates.textContent = menuDuplicateCount
-    ? `Одинаковые повторы объединены в списке: ${menuDuplicateCount}. Изменение или удаление блюда применится ко всем его копиям.`
-    : '';
+  $('#menuEmpty').hidden = visibleItems.length > 0;
+  $('#menuEmpty').textContent = menuItems.length ? 'Блюда с таким названием не найдены.' : 'Блюд пока нет. Добавьте позицию через кнопку «Добавить блюдо».';
+  $('#menuCount').textContent = query ? `Показано: ${visibleItems.length} из ${menuItems.length}.` : `Всего блюд: ${menuItems.length}.`;
 }
 
 function renderAll() {
@@ -319,6 +342,7 @@ $('#logoutButton').addEventListener('click', async () => {
 });
 
 $('#refreshButton').addEventListener('click', refreshDashboard);
+$('#menuSearch').addEventListener('input', renderMenu);
 document.querySelectorAll('.admin-tab').forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('.admin-tab').forEach(tab => {
     const selected = tab === button;
@@ -362,36 +386,13 @@ $('#contactsForm').addEventListener('submit', async event => {
 });
 $('#addMenuButton').addEventListener('click', () => openMenuEditor());
 $('#cancelMenuEdit').addEventListener('click', closeMenuEditor);
-$('#syncGrillButton').addEventListener('click', async event => {
-  const grillItems = window.DONISHEF_MENU_SEED.filter(item => item.cat === 'Мангал');
-  if (!grillItems.length || !window.confirm(`Заменить все позиции категории «Мангал» на ${grillItems.length} новые блюда? Остальное меню не изменится.`)) return;
-  const button = event.currentTarget;
-  button.disabled = true;
-  setFeedback($('#menuFeedback'), 'Обновляются блюда категории «Мангал»...');
-  try {
-    const {data: insertedItems, error: insertError} = await client.from('menu_items')
-      .insert(grillItems.map((item, index) => menuRecord(item, index)))
-      .select('id');
-    if (insertError) throw insertError;
-    const insertedIds = insertedItems.map(item => item.id);
-    if (insertedIds.length !== grillItems.length) throw new Error('База сохранила не все блюда категории «Мангал».');
-    const {error: deleteError} = await client.from('menu_items')
-      .delete()
-      .eq('category', 'Мангал')
-      .not('id', 'in', `(${insertedIds.join(',')})`);
-    if (deleteError) throw deleteError;
-    const refreshed = await refreshDashboard();
-    setFeedback($('#menuFeedback'), refreshed
-      ? `Шашлыки обновлены: ${grillItems.length} блюд. Старые позиции категории «Мангал» удалены.`
-      : 'Шашлыки обновлены, но список не обновился. Нажмите «Обновить данные».', refreshed);
-  } catch (error) {
-    console.error('Не удалось обновить блюда категории «Мангал».', error);
-    setFeedback($('#menuFeedback'), 'Не удалось полностью обновить шашлыки. Нажмите «Обновить данные» и попробуйте снова.');
-  } finally {
-    button.disabled = false;
-  }
-});
 $('#menuList').addEventListener('click', event => {
+  const stockButton = event.target.closest('[data-toggle-stock]');
+  if (stockButton) {
+    const item = menuItems.find(row => row.id === Number(stockButton.dataset.toggleStock));
+    if (item) void setMenuAvailability(item, item.available === false);
+    return;
+  }
   const button = event.target.closest('[data-edit-menu]');
   if (!button) return;
   const item = menuItems.find(row => row.id === Number(button.dataset.editMenu));
@@ -419,7 +420,8 @@ $('#menuForm').addEventListener('submit', async event => {
       tag: String(data.get('tag')).trim() || null,
       serving_note: String(data.get('serving_note')).trim() || null,
       recipe: String(data.get('recipe')).trim() || null,
-      sort_order: Number(data.get('sort_order'))
+      sort_order: Number(data.get('sort_order')),
+      available: itemId ? menuItems.find(item => item.id === Number(itemId))?.available !== false : true
     };
     if (!Number.isSafeInteger(record.price) || record.price < 0 || !Number.isInteger(record.sort_order)) {
       throw new Error('Проверьте цену и порядок показа блюда.');
@@ -459,23 +461,6 @@ $('#deleteMenuButton').addEventListener('click', async () => {
   closeMenuEditor();
   const refreshed = await refreshDashboard();
   setFeedback($('#menuFeedback'), refreshed ? 'Блюдо удалено из меню.' : 'Блюдо удалено, но список не обновился. Нажмите «Обновить данные».', refreshed);
-});
-
-$('#importMenuButton').addEventListener('click', async () => {
-  if (menuItems.length || !window.confirm('Загрузить все блюда текущего меню в онлайн-базу?')) return;
-  const button = $('#importMenuButton');
-  button.disabled = true;
-  setFeedback($('#menuFeedback'), 'Загружается исходное меню...');
-  const records = window.DONISHEF_MENU_SEED.map(menuRecord);
-  const {error} = await client.from('menu_items').insert(records);
-  button.disabled = false;
-  if (error) {
-    console.error('Не удалось загрузить начальное меню.', error);
-    setFeedback($('#menuFeedback'), 'Не удалось загрузить исходное меню. Проверьте таблицу и права владельца.');
-    return;
-  }
-  const refreshed = await refreshDashboard();
-  setFeedback($('#menuFeedback'), refreshed ? 'Исходное меню загружено.' : 'Исходное меню загружено, но список не обновился. Нажмите «Обновить данные».', refreshed);
 });
 
 async function initialize() {

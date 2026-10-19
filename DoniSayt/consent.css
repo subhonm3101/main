@@ -1,0 +1,26 @@
+.personal-data-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0;
+  color: #5c554c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.personal-data-consent input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: #161616;
+}
+.personal-data-consent a + span { margin-inline: 2px; }
+.personal-data-consent a {
+  color: #171717;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.personal-data-consent a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}

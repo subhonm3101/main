@@ -15,9 +15,11 @@ create table if not exists public.menu_items (
   tag text check (tag is null or char_length(tag) <= 40),
   serving_note text check (serving_note is null or char_length(serving_note) <= 500),
   recipe text check (recipe is null or char_length(recipe) <= 2000),
+  available boolean not null default true,
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+alter table public.menu_items add column if not exists available boolean not null default true;
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -29,8 +31,14 @@ create table if not exists public.orders (
   address text,
   comment text,
   total integer not null default 0 check (total between 0 and 1000000),
-  status text not null default 'new' check (status in ('new', 'confirmed', 'completed', 'cancelled'))
+  status text not null default 'new' check (status in ('new', 'confirmed', 'completed', 'cancelled')),
+  personal_data_consent boolean not null default false,
+  personal_data_consent_at timestamptz,
+  privacy_policy_version text
 );
+alter table public.orders add column if not exists personal_data_consent boolean not null default false;
+alter table public.orders add column if not exists personal_data_consent_at timestamptz;
+alter table public.orders add column if not exists privacy_policy_version text;
 
 create table if not exists public.restaurant_contacts (
   id boolean primary key default true check (id),
@@ -134,6 +142,7 @@ grant select on public.restaurant_contacts to anon, authenticated;
 grant update on public.restaurant_contacts to authenticated;
 grant usage, select on sequence public.menu_items_id_seq to authenticated;
 
+drop function if exists public.create_restaurant_order(text, text, text, text, text, text, jsonb, boolean, text);
 drop function if exists public.create_restaurant_order(text, text, text, text, text, text, jsonb);
 create or replace function public.create_restaurant_order(
   p_customer_name text,
@@ -142,7 +151,9 @@ create or replace function public.create_restaurant_order(
   p_branch text,
   p_address text,
   p_comment text,
-  p_items jsonb
+  p_items jsonb,
+  p_personal_data_consent boolean,
+  p_privacy_policy_version text
 )
 returns jsonb
 language plpgsql
@@ -176,6 +187,12 @@ begin
   if char_length(coalesce(p_comment, '')) > 1000 then
     raise exception 'Комментарий слишком длинный.';
   end if;
+  if p_personal_data_consent is distinct from true then
+    raise exception 'Для оформления заказа необходимо согласие на обработку персональных данных.';
+  end if;
+  if p_privacy_policy_version is distinct from '2026-10-v1' then
+    raise exception 'Версия политики конфиденциальности устарела. Обновите страницу и повторите заказ.';
+  end if;
   if coalesce(jsonb_typeof(p_items), '') <> 'array' then
     raise exception 'Некорректный список блюд.';
   end if;
@@ -191,14 +208,20 @@ begin
     raise exception 'Слишком много заявок с этого номера. Попробуйте позже.';
   end if;
 
-  insert into public.orders (customer_name, phone, order_type, branch, address, comment)
+  insert into public.orders (
+    customer_name, phone, order_type, branch, address, comment,
+    personal_data_consent, personal_data_consent_at, privacy_policy_version
+  )
   values (
     trim(p_customer_name),
     trim(p_phone),
     p_order_type,
     trim(p_branch),
     nullif(trim(coalesce(p_address, '')), ''),
-    nullif(trim(coalesce(p_comment, '')), '')
+    nullif(trim(coalesce(p_comment, '')), ''),
+    true,
+    now(),
+    p_privacy_policy_version
   )
   returning id into v_order_id;
 
@@ -217,9 +240,13 @@ begin
 
     select * into v_menu_item
     from public.menu_items
-    where id = v_item_id;
+    where id = v_item_id
+    for share;
     if not found then
       raise exception 'Одно из блюд больше недоступно. Обновите страницу и повторите заказ.';
+    end if;
+    if not v_menu_item.available then
+      raise exception 'Блюдо «%» сейчас на стопе. Удалите его из корзины и повторите заказ.', v_menu_item.name;
     end if;
 
     v_total := v_total + v_menu_item.price::bigint * v_quantity;
@@ -265,8 +292,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_restaurant_order(text, text, text, text, text, text, jsonb) from public;
-grant execute on function public.create_restaurant_order(text, text, text, text, text, text, jsonb) to anon, authenticated;
+revoke all on function public.create_restaurant_order(text, text, text, text, text, text, jsonb, boolean, text) from public;
+grant execute on function public.create_restaurant_order(text, text, text, text, text, text, jsonb, boolean, text) to anon, authenticated;
 
 insert into storage.buckets (id, name, public)
 values ('menu-photos', 'menu-photos', true)

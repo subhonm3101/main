@@ -1,0 +1,18 @@
+:root { color-scheme: light; font: 16px/1.65 Arial, sans-serif; color: #201d19; background: #f8f4ec; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.legal-page { max-width: 880px; margin: 0 auto; padding: 32px 20px 64px; }
+.legal-page h1, .legal-page h2 { line-height: 1.25; }
+.legal-page h1 { font-size: clamp(28px, 5vw, 42px); }
+.legal-page h2 { margin-top: 32px; font-size: 22px; }
+.legal-page li { margin: 8px 0; }
+.legal-page a { color: #8e3528; }
+.draft-notice { padding: 16px; border: 2px solid #a93c2e; background: #fff1ed; color: #762b21; }
+.operator-details { padding: 16px; background: #fff; }
+.site-legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; padding: 18px 20px; border-top: 1px solid rgba(37, 23, 16, .12); background: #f8f4ec; font-size: 12px; }
+.site-legal-links a { color: #554d45; text-underline-offset: 3px; }
+.site-legal-links a:hover, .site-legal-links a:focus-visible { color: #8e3528; }
+.map-consent-card { display: grid; min-height: 100%; align-content: center; justify-items: center; gap: 14px; padding: 26px; text-align: center; }
+.map-consent-card p { max-width: 420px; margin: 0; color: #514a42; font-size: 14px; line-height: 1.6; }
+.map-consent-card .btn { cursor: pointer; }
+@media (max-width: 600px) { .legal-page { padding: 24px 16px 48px; } .site-legal-links { align-items: flex-start; flex-direction: column; } }
