@@ -46,6 +46,11 @@ footer.site-footer { padding: 56px 0 24px; background: var(--dark); color: #ddd7
 @media (max-width: 900px) { input, select, textarea { font-size: 16px !important; } }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 a, button, input, select, textarea, label { touch-action: manipulation; }
+.modal-box input, .modal-box select, .modal-box textarea { width: 100%; min-width: 0; max-width: 100%; }
+.modal-box input[type="date"], .modal-box input[type="time"] { display: block; -webkit-appearance: none; appearance: none; min-height: 48px; text-align: left; }
+.modal-box label, .booking-form-row, .booking-form-row > label { min-width: 0; }
+.modal-box { overflow-x: hidden; }
+.modal { overscroll-behavior: contain; }
 @media (hover: none) {
   .menu-card:hover, .menu-card:hover .food-image img, .branch-grid a:hover { transform: none !important; }
 }
