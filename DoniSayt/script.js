@@ -171,32 +171,20 @@ function openDishModal(id, trigger) {
 const branchMap = document.getElementById('branchMap');
 if (!branchMap) throw new Error('Не найдена область карты филиалов.');
 branchMap.setAttribute('aria-label', 'Местоположение DoniШеф в Уфе на Яндекс Картах');
-const restaurantMapQuery = 'DoniШеф, Уфа';
+const restaurantMapQuery = 'Уфа, улица Ленина, 30';
 const mapFallback = document.createElement('a');
 mapFallback.className = 'map-fallback-link';
 mapFallback.href = `https://yandex.ru/maps/?text=${encodeURIComponent(restaurantMapQuery)}`;
 mapFallback.target = '_blank';
 mapFallback.rel = 'noopener';
-mapFallback.textContent = 'Открыть Яндекс Карты без встраивания ↗';
-const mapConsentCard = document.createElement('div');
-mapConsentCard.className = 'map-consent-card';
-const mapDisclosure = document.createElement('p');
-mapDisclosure.textContent = 'Интерактивную карту предоставляет Яндекс. При её загрузке Яндекс получит технические данные браузера и сетевого соединения. Карта не загружается, пока вы не нажмёте кнопку.';
-const loadMapButton = document.createElement('button');
-loadMapButton.className = 'btn btn-primary';
-loadMapButton.type = 'button';
-loadMapButton.textContent = 'Загрузить карту Яндекса';
-mapConsentCard.append(mapDisclosure, loadMapButton);
-branchMap.replaceChildren(mapConsentCard, mapFallback);
-loadMapButton.addEventListener('click', () => {
- const mapFrame = document.createElement('iframe');
- mapFrame.className = 'branch-map-frame';
- mapFrame.title = 'DoniШеф в Уфе — Яндекс Карты';
- mapFrame.loading = 'lazy';
- mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
- mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(restaurantMapQuery)}&z=12`;
- branchMap.replaceChildren(mapFrame, mapFallback);
-});
+mapFallback.textContent = 'Открыть в Яндекс Картах ↗';
+const mapFrame = document.createElement('iframe');
+mapFrame.className = 'branch-map-frame';
+mapFrame.title = 'DoniШеф в Уфе — Яндекс Карты';
+mapFrame.loading = 'lazy';
+mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
+mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(restaurantMapQuery)}&z=16`;
+branchMap.replaceChildren(mapFrame, mapFallback);
 
 dishModal.querySelector('.modal-close').addEventListener('click', closeDishModal);
 dishModal.addEventListener('click', event => {
@@ -346,12 +334,12 @@ function addPersonalDataConsent(form, insertBefore) {
   const text = document.createElement('span');
   text.append('Я даю отдельное согласие на обработку персональных данных для ответа и оформления заявки. ');
   const consentLink = document.createElement('a');
-  consentLink.href = 'personal-data-consent.html';
+  consentLink.href = 'personal-data-consent.pdf';
   consentLink.target = '_blank';
   consentLink.rel = 'noopener';
   consentLink.textContent = 'Текст согласия';
   const policyLink = document.createElement('a');
-  policyLink.href = 'privacy-policy.html';
+  policyLink.href = 'privacy-policy.pdf';
   policyLink.target = '_blank';
   policyLink.rel = 'noopener';
   policyLink.textContent = 'Политика обработки данных';
