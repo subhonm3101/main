@@ -42,3 +42,10 @@ footer.site-footer { padding: 56px 0 24px; background: var(--dark); color: #ddd7
 @media (max-width: 900px) { .footer-top { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { footer.site-footer { padding: 36px 0 20px; } .footer-top { grid-template-columns: 1fr; gap: 24px; } .footer-legal { flex-direction: column; } }
 @media (max-width: 600px) { .legal-page { padding: 24px 16px 48px; } .site-legal-links { align-items: flex-start; flex-direction: column; } }
+
+@media (max-width: 900px) { input, select, textarea { font-size: 16px !important; } }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+a, button, input, select, textarea, label { touch-action: manipulation; }
+@media (hover: none) {
+  .menu-card:hover, .menu-card:hover .food-image img, .branch-grid a:hover { transform: none !important; }
+}
