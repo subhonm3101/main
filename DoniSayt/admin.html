@@ -2,6 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co; font-src 'self'; form-action 'self'; base-uri 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#f5f1ea">
@@ -22,8 +24,8 @@
       <h1>Панель владельца</h1>
       <p class="admin-muted">Войдите, чтобы управлять заказами, клиентами, контактами ресторана и меню.</p>
       <form id="adminLoginForm">
-        <label>Email<input type="email" name="email" autocomplete="username" required></label>
-        <label>Пароль<input type="password" name="password" autocomplete="current-password" required></label>
+        <label>Email<input type="email" name="email" id="adminEmail" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+        <label>Пароль<input type="password" name="password" id="adminPassword" autocomplete="current-password" minlength="8" required></label>
         <button class="btn btn-primary full" type="submit">Войти</button>
       </form>
       <p class="admin-feedback" id="loginFeedback" role="status"></p>
@@ -48,13 +50,15 @@
         <div class="admin-section-heading"><div><h2>Заказы</h2><p>Здесь отображаются заявки за весь период. Создание заявки на сайте не подтверждает, что клиент отправил сообщение в мессенджере. Свяжитесь с клиентом по телефону или через WhatsApp. WhatsApp/MAX не сообщает сайту, отправлено ли сообщение.</p></div>
           <div class="admin-filters"><input id="orderSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск заказов"></div>
         </div>
-        <div class="admin-table-wrap"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Состав заказа</th><th>Сумма</th><th>Получение</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
+        <div class="admin-bulk"><span id="ordersSelectedCount"></span><button class="btn btn-outline admin-danger" id="ordersDeleteButton" type="button" disabled>Удалить выбранные</button></div>
+        <div class="admin-table-wrap"><table><thead><tr><th class="admin-check"><input type="checkbox" id="ordersSelectAll" aria-label="Выбрать все заказы"></th><th>Дата</th><th>Клиент</th><th>Состав заказа</th><th>Сумма</th><th>Получение</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
         <p class="admin-empty" id="ordersEmpty" hidden>Заказов пока нет.</p>
       </section>
 
       <section class="admin-panel" id="clientsPanel" hidden>
         <div class="admin-section-heading"><div><h2>Клиенты</h2><p>Контакты сгруппированы по номеру телефона из заказов.</p></div><input id="clientSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск клиентов"></div>
-        <div class="admin-table-wrap"><table><thead><tr><th>Имя</th><th>Телефон</th><th>Заказов</th><th>Последний заказ</th><th>Всего заказано</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+        <div class="admin-bulk"><span id="clientsSelectedCount"></span><button class="btn btn-outline admin-danger" id="clientsDeleteButton" type="button" disabled>Удалить выбранных</button></div>
+        <div class="admin-table-wrap"><table><thead><tr><th class="admin-check"><input type="checkbox" id="clientsSelectAll" aria-label="Выбрать всех клиентов"></th><th>Имя</th><th>Телефон</th><th>Заказов</th><th>Последний заказ</th><th>Всего заказано</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
         <p class="admin-empty" id="clientsEmpty" hidden>Клиентов пока нет.</p>
       </section>
 
@@ -104,9 +108,9 @@
       </section>
     </section>
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" integrity="sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
   <script src="menu-data.js"></script>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=6"></script>
 </body>
 </html>

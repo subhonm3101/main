@@ -1,17 +1,20 @@
 .personal-data-consent {
-  display: flex;
+  display: flex !important;
+  flex-direction: row !important;
   align-items: flex-start;
   gap: 10px;
+  width: 100%;
   margin: 16px 0;
   color: #5c554c;
   font-size: 13px;
   line-height: 1.5;
+  text-align: left;
 }
-.personal-data-consent input {
+.modal-box .personal-data-consent input {
   flex: 0 0 auto;
   width: 17px;
   height: 17px;
-  margin: 2px 0 0;
+  margin: 2px 0 0 !important;
   accent-color: #161616;
 }
 .personal-data-consent a + span { margin-inline: 2px; }

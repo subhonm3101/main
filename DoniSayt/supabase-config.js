@@ -3,11 +3,11 @@ window.DONISHEF_SUPABASE_CONFIG = {
   anonKey: 'sb_publishable_WrrvPHP2CFcwLnfkSAMWCw_XFZEC0zz'
 };
 
-window.createDoniSupabaseClient = () => {
+window.createDoniSupabaseClient = options => {
   const {url, anonKey} = window.DONISHEF_SUPABASE_CONFIG;
   if (!url || !anonKey) return null;
   if (!window.supabase?.createClient) {
     throw new Error('Библиотека Supabase не загружена.');
   }
-  return window.supabase.createClient(url, anonKey);
+  return window.supabase.createClient(url, anonKey, options);
 };

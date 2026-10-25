@@ -1,5 +1,5 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
-let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
+let restaurantContacts = {call_phone: '+79373231005', max_phone: '+79191545232'};
 let contactSettingsPromise = Promise.resolve();
 let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, available: item.available !== false}));
 let supabaseClient = null;
@@ -66,7 +66,7 @@ const deliveryPhoto = document.querySelector('.delivery-photo');
 deliveryPhoto.src = asset('restaurant-plov-bowl.webp');
 deliveryPhoto.alt = 'Плов DoniШеф на традиционном блюде';
 deliveryPhoto.classList.add('photo-real');
-const categoryNames = {'Плов': 'Пловы', 'Первые блюда': 'Супы', Мангал: 'Шашлыки'};
+const categoryNames = {'Плов': 'Пловы', 'Первые блюда': 'Супы', Мангал: 'Шашлыки', Торты: 'Десерты'};
 const inquiryCategories = [];
 const inquiryCards = {};
 const categoryOrder = ['Плов', 'Первые блюда', 'Вторые блюда', 'Мангал', 'Гарниры', 'Детское меню', 'Салаты', 'Полпорции', ...inquiryCategories, 'Торты', 'Напитки'];
@@ -170,21 +170,40 @@ function openDishModal(id, trigger) {
 
 const branchMap = document.getElementById('branchMap');
 if (!branchMap) throw new Error('Не найдена область карты филиалов.');
-branchMap.setAttribute('aria-label', 'Местоположение DoniШеф в Уфе на Яндекс Картах');
-const restaurantMapQuery = 'Уфа, улица Ленина, 30';
+branchMap.setAttribute('aria-label', 'Адреса DoniШеф в Уфе на Яндекс Картах');
+const restaurantMapAddresses = [
+  'Уфа, улица Ленина, 30',
+  'Уфа, проспект Дружбы Народов, 19/5',
+  'Уфа, проспект Дружбы Народов, 21/2'
+];
+const mapAddressSelect = document.createElement('select');
+mapAddressSelect.className = 'branch-map-address-select';
+mapAddressSelect.setAttribute('aria-label', 'Выберите адрес DoniШеф на карте');
+mapAddressSelect.innerHTML = restaurantMapAddresses
+  .map((address, index) => `<option value="${index}">${escapeHtml(address.replace(/^Уфа,\s*/, ''))}</option>`)
+  .join('');
 const mapFallback = document.createElement('a');
 mapFallback.className = 'map-fallback-link';
-mapFallback.href = `https://yandex.ru/maps/?text=${encodeURIComponent(restaurantMapQuery)}`;
 mapFallback.target = '_blank';
 mapFallback.rel = 'noopener';
 mapFallback.textContent = 'Открыть в Яндекс Картах ↗';
 const mapFrame = document.createElement('iframe');
+const contactYandexMaps = document.getElementById('contactYandexMaps');
+const contact2Gis = document.getElementById('contact2Gis');
 mapFrame.className = 'branch-map-frame';
-mapFrame.title = 'DoniШеф в Уфе — Яндекс Карты';
 mapFrame.loading = 'lazy';
 mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
-mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(restaurantMapQuery)}&z=16`;
-branchMap.replaceChildren(mapFrame, mapFallback);
+function showMapAddress() {
+  const address = restaurantMapAddresses[Number(mapAddressSelect.value)];
+  mapFrame.title = `${address} — Яндекс Карты`;
+  mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(address)}&z=16`;
+  mapFallback.href = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
+  contactYandexMaps.href = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
+  contact2Gis.href = `https://2gis.ru/ufa/search/${encodeURIComponent(address)}`;
+}
+mapAddressSelect.addEventListener('change', showMapAddress);
+branchMap.replaceChildren(mapAddressSelect, mapFrame, mapFallback);
+showMapAddress();
 
 dishModal.querySelector('.modal-close').addEventListener('click', closeDishModal);
 dishModal.addEventListener('click', event => {
@@ -349,13 +368,13 @@ function addPersonalDataConsent(form, insertBefore) {
   return checkbox;
 }
 addPersonalDataConsent(orderForm, orderForm.querySelector('button[type="submit"]'));
-orderForm.querySelector('button[type="submit"] span').textContent = 'Открыть WhatsApp с заказом';
+orderForm.querySelector('button[type="submit"] span').textContent = 'Подготовить заказ для MAX';
 orderForm.elements.name.maxLength = 120;
 orderForm.elements.address.maxLength = 300;
 orderForm.elements.comment.maxLength = 1000;
 const adminSetupNotice = document.createElement('p');
 adminSetupNotice.className = 'form-note admin-setup-notice';
-adminSetupNotice.textContent = 'Онлайн-учёт заявок пока не подключён: заказы можно отправить в WhatsApp/MAX, но они не появятся в панели владельца.';
+adminSetupNotice.textContent = 'Онлайн-учёт заявок пока не подключён: заказы можно отправить в MAX, но они не появятся в панели владельца.';
 adminSetupNotice.hidden = Boolean(supabaseClient);
 modal.querySelector('h2').after(adminSetupNotice);
 phoneInput.placeholder = '+7 (___) ___-__-__';
@@ -446,14 +465,15 @@ function buildOrderMessage(data, savedOrder) {
     }).join('\n');
   const total = savedOrder ? Number(savedOrder.total) : cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
   const details = [
-    savedOrder?.id ? `Номер заказа: ${savedOrder.id}` : null,
     `Получение: ${data.get('orderType')}`,
     `Филиал: ${data.get('branch')}`,
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
-    `Комментарий: ${data.get('comment') || '—'}`
+    data.get('comment') ? `Комментарий: ${data.get('comment')}` : null
   ].filter(Boolean).join('\n');
-  return `Новый заказ с сайта «DoniШеф»\n\n${items}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nСогласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
+  const dataNotice = savedOrder
+    ? 'Данные заказа сохранены в системе ресторана для его обработки.'
+    : 'Данные из формы переданы в MAX; заказ не сохранён в базе сайта.';
+  return `Заказ DoniШеф\n${savedOrder?.id ? `Номер заказа: ${savedOrder.id}\n` : ''}\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\n${dataNotice}\nСогласие на обработку персональных данных получено.`;
 }
 async function saveRestaurantOrder(data) {
   if (!supabaseClient) {
@@ -489,12 +509,6 @@ document.getElementById('orderForm').addEventListener('submit', async event => {
   const data = new FormData(event.target);
   const submitButton = event.submitter;
   if (submitButton) submitButton.disabled = true;
-  const order = cart.map(row => {
-    const item = menu.find(entry => entry.id === row.id);
-    const servingNote = servingNoteFor(item);
-    return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
-  }).join('\n');
-  const total = cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
   const unavailableItem = cart.find(row => menu.find(item => item.id === row.id)?.available === false);
   if (unavailableItem) {
     const itemName = menu.find(item => item.id === unavailableItem.id)?.name || 'Блюдо';
@@ -502,68 +516,25 @@ document.getElementById('orderForm').addEventListener('submit', async event => {
     if (submitButton) submitButton.disabled = false;
     return;
   }
-  const details = [
-    `Получение: ${data.get('orderType')}`,
-    `Филиал: ${data.get('branch')}`,
-    data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
-    `Комментарий: ${data.get('comment') || '—'}`
-  ].filter(Boolean).join('\n');
-  const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nСогласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
-  let savedOrder;
+  const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
+  let savedOrder = null;
   try {
     await contactSettingsPromise;
+  } catch (error) {
+    console.error('Не удалось загрузить контакты ресторана.', error);
+    maxWindow?.close();
+    window.alert('Не удалось загрузить контакты ресторана. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
+    if (submitButton) submitButton.disabled = false;
+    return;
+  }
+  try {
     savedOrder = await saveRestaurantOrder(data);
   } catch (error) {
-    console.error('Не удалось загрузить контакты или сохранить заказ.', error);
-    window.alert('Не удалось загрузить контакты ресторана или сохранить заказ. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
-    if (submitButton) submitButton.disabled = false;
-    return;
+    console.error('Не удалось сохранить заказ в Supabase.', error);
+    window.alert('Не удалось сохранить заказ в онлайн-панели Supabase. Текст заказа будет скопирован для отправки в MAX.');
   }
-  const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
-  window.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(orderMessage)}`;
-  cart = [];
-  saveCart();
-  modal.classList.remove('show');
-  closeCart();
-  event.target.reset();
-  phoneInput.value = '+7 (';
-  updatePhoneValidity();
-  updateAddressRequirement();
-});
-const maxOrderButton = document.getElementById('orderViaMax');
-maxOrderButton.textContent = 'Скопировать заказ и открыть MAX';
-maxOrderButton.addEventListener('click', async () => {
-  const orderForm = document.getElementById('orderForm');
-  if (!orderForm.reportValidity()) return;
-  maxOrderButton.disabled = true;
-  const data = new FormData(orderForm);
-  const order = cart.map(row => {
-    const item = menu.find(entry => entry.id === row.id);
-    const servingNote = servingNoteFor(item);
-    return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
-  }).join('\n');
-  const total = cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
-  const unavailableItem = cart.find(row => menu.find(item => item.id === row.id)?.available === false);
-  if (unavailableItem) {
-    const itemName = menu.find(item => item.id === unavailableItem.id)?.name || 'Блюдо';
-    window.alert(`«${itemName}» сейчас на стопе. Удалите его из корзины, чтобы продолжить.`);
-    maxOrderButton.disabled = false;
-    return;
-  }
-  const details = [
-    `Получение: ${data.get('orderType')}`,
-    `Филиал: ${data.get('branch')}`,
-    data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
-    data.get('orderType') === 'Доставка' ? 'Условия и стоимость доставки уточняются при подтверждении заказа.' : null,
-    `Комментарий: ${data.get('comment') || '—'}`
-  ].filter(Boolean).join('\n');
-  const message = `Новый заказ с сайта «DoniШеф»\n\n${order}\n\nСумма блюд: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\nПожалуйста, перезвоните клиенту для подтверждения.`;
-  const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
+  const orderMessage = buildOrderMessage(data, savedOrder);
   try {
-    await contactSettingsPromise;
-    const savedOrder = await saveRestaurantOrder(data);
-    const orderMessage = savedOrder ? buildOrderMessage(data, savedOrder) : message;
     if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(orderMessage);
@@ -576,16 +547,24 @@ maxOrderButton.addEventListener('click', async () => {
     }
     const status = document.getElementById('maxOrderStatus');
     status.textContent = maxWindow
-      ? `Заказ скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`
-      : `Заказ скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`;
+      ? `Текст заказа скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`
+      : `Текст заказа скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`;
     status.hidden = false;
   } catch (error) {
-    console.error('Не удалось сохранить заказ или скопировать его для MAX.', error);
+    console.error('Не удалось скопировать заказ для MAX.', error);
     maxWindow?.close();
-    window.alert('Не удалось сохранить или скопировать заказ. Проверьте подключение и разрешение на буфер обмена, затем попробуйте ещё раз.');
-  } finally {
-    maxOrderButton.disabled = false;
+    window.alert('Не удалось скопировать заказ для MAX. Проверьте разрешение на буфер обмена и попробуйте снова.');
+    if (submitButton) submitButton.disabled = false;
+    return;
   }
+  cart = [];
+  saveCart();
+  modal.classList.remove('show');
+  closeCart();
+  event.target.reset();
+  phoneInput.value = '+7 (';
+  updatePhoneValidity();
+  updateAddressRequirement();
 });
 function copyOrderWithSelection(message) {
   const textarea = document.createElement('textarea');
@@ -602,8 +581,7 @@ function copyOrderWithSelection(message) {
 const bookingModal = document.getElementById('bookingModal');
 const bookingForm = document.getElementById('bookingForm');
 addPersonalDataConsent(bookingForm, bookingForm.querySelector('.booking-submit-actions'));
-document.getElementById('bookingViaWhatsApp').querySelector('span').textContent = 'Открыть WhatsApp с заявкой';
-document.getElementById('bookingViaMax').textContent = 'Скопировать заявку и открыть MAX';
+document.getElementById('bookingViaMax').textContent = 'Подготовить заявку для MAX';
 const bookingPhoneInput = bookingForm.elements.phone;
 const closeBookingButton = document.getElementById('closeBookingModal');
 let bookingReturnFocus;
@@ -654,34 +632,16 @@ function buildBookingMessage() {
   const guests = Number(data.get('guests'));
   if (!Number.isInteger(guests) || guests < 1 || guests > 100) throw new RangeError('Количество гостей должно быть от 1 до 100.');
   return [
-    'Здравствуйте! Хочу оставить заявку на бронирование. Подскажите, пожалуйста, доступность и условия.',
+    'Заявка на бронирование DoniШеф',
     `Имя: ${data.get('name')}`,
     `Телефон: ${data.get('phone')}`,
     `Количество гостей: ${guests}`,
     `Дата: ${data.get('date')}`,
     `Время начала: ${data.get('time')}`,
-    `Пожелания: ${data.get('comment') || '—'}`,
-    `Согласие на обработку персональных данных получено, версия политики ${PRIVACY_POLICY_VERSION}.`
-  ].join('\n');
+    data.get('comment') ? `Пожелания: ${data.get('comment')}` : null,
+    'Согласие на обработку персональных данных получено.'
+  ].filter(Boolean).join('\n');
 }
-document.getElementById('bookingViaWhatsApp').addEventListener('click', async () => {
-  if (!bookingForm.reportValidity()) return;
-  const message = buildBookingMessage();
-  const targetWindow = window.open('about:blank', '_blank');
-  try {
-    await contactSettingsPromise;
-    if (!targetWindow) {
-      window.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-      return;
-    }
-    targetWindow.opener = null;
-    targetWindow.location.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-  } catch (error) {
-    console.error('Не удалось загрузить контакты для бронирования.', error);
-    targetWindow?.close();
-    window.alert('Не удалось загрузить контакты ресторана. Проверьте подключение к интернету и попробуйте снова.');
-  }
-});
 document.getElementById('bookingViaMax').addEventListener('click', async () => {
   if (!bookingForm.reportValidity()) return;
   const message = buildBookingMessage();
@@ -700,8 +660,8 @@ document.getElementById('bookingViaMax').addEventListener('click', async () => {
     }
     const status = document.getElementById('bookingMaxStatus');
     status.textContent = maxWindow
-      ? `Заявка скопирована. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`
-      : `Заявка скопирована. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и отправьте текст.`;
+      ? `Текст заявки скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`
+      : `Текст заявки скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`;
     status.hidden = false;
   } catch (error) {
     console.error('Не удалось скопировать заявку на бронирование для MAX.', error);
@@ -821,12 +781,12 @@ async function loadMenuFromSupabase() {
 }
 if (supabaseClient) {
   contactSettingsPromise = supabaseClient.from('restaurant_contacts')
-    .select('call_phone,whatsapp_phone,max_phone')
+    .select('call_phone,max_phone')
     .eq('id', true)
     .single()
     .then(({data, error}) => {
       if (error) throw error;
-      if (!data || !/^\+[1-9]\d{7,14}$/.test(data.call_phone) || !/^\+[1-9]\d{7,14}$/.test(data.whatsapp_phone) || !/^\+[1-9]\d{7,14}$/.test(data.max_phone)) {
+      if (!data || !/^\+[1-9]\d{7,14}$/.test(data.call_phone) || !/^\+[1-9]\d{7,14}$/.test(data.max_phone)) {
         throw new Error('Контакты ресторана отсутствуют или имеют неверный формат.');
       }
       restaurantContacts = data;
@@ -841,5 +801,13 @@ if (supabaseClient) {
     console.error('Не удалось загрузить меню из онлайн-базы.', error);
     menuSyncStatus.textContent = 'Не удалось загрузить актуальное меню. Показан сохранённый каталог; проверьте подключение к онлайн-базе.';
     menuSyncStatus.hidden = false;
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    loadMenuFromSupabase().catch(error => {
+      console.error('Не удалось обновить меню при возврате на вкладку.', error);
+      menuSyncStatus.textContent = 'Не удалось обновить меню. Проверьте подключение к онлайн-базе или обновите страницу.';
+      menuSyncStatus.hidden = false;
+    });
   });
 }

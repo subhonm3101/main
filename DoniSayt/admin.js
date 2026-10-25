@@ -1,3 +1,4 @@
+if (window.top !== window.self) { document.documentElement.hidden = true; window.top.location = window.self.location; }
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
 const formatPrice = value => `${Number(value).toLocaleString('ru-RU')} ₽`;
@@ -7,6 +8,13 @@ let orders = [];
 let menuItems = [];
 let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
 let editingMenuIds = [];
+let failedLogins = 0;
+let lockedUntil = 0;
+const IDLE_LIMIT_MS = 5 * 60 * 1000;
+let idleTimer = null;
+const selectedOrders = new Set();
+const selectedClients = new Set();
+let clientOrderIds = new Map();
 
 function setFeedback(element, message, success = false) {
   element.textContent = message;
@@ -14,7 +22,50 @@ function setFeedback(element, message, success = false) {
   element.hidden = !message;
 }
 
+const ACTIVITY_KEY = 'donishef-admin-last-activity';
+
+function clearStoredSessions() {
+  try {
+    for (const storage of [localStorage, sessionStorage]) {
+      Object.keys(storage).filter(key => /^sb-.*-auth-token/.test(key)).forEach(key => storage.removeItem(key));
+    }
+    sessionStorage.removeItem(ACTIVITY_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+function sessionExpired() {
+  try {
+    const last = Number(sessionStorage.getItem(ACTIVITY_KEY));
+    return !last || Date.now() - last > IDLE_LIMIT_MS;
+  } catch { return true; }
+}
+
+function touchActivity() {
+  try { sessionStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch { /* storage unavailable */ }
+}
+
+async function expireSession() {
+  await client.auth.signOut().catch(() => {});
+  clearStoredSessions();
+  orders = [];
+  menuItems = [];
+  renderAll();
+  showLogin('Сеанс завершён из-за бездействия. Войдите снова.');
+}
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  if ($('#adminDashboard').hidden) return;
+  touchActivity();
+  idleTimer = setTimeout(expireSession, IDLE_LIMIT_MS);
+}
+['click', 'keydown', 'touchstart', 'scroll'].forEach(name => document.addEventListener(name, resetIdleTimer, {passive: true}));
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && !$('#adminDashboard').hidden && sessionExpired()) expireSession();
+});
+
 function showLogin(message = '') {
+  clearTimeout(idleTimer);
   $('#loginScreen').hidden = false;
   $('#adminDashboard').hidden = true;
   $('#logoutButton').hidden = true;
@@ -25,6 +76,7 @@ function showDashboard() {
   $('#loginScreen').hidden = true;
   $('#adminDashboard').hidden = false;
   $('#logoutButton').hidden = false;
+  resetIdleTimer();
 }
 
 async function verifyOwner(session) {
@@ -202,6 +254,7 @@ function renderOrders() {
       ? `<a class="admin-whatsapp-link" href="https://wa.me/${escapeHtml(phone)}" target="_blank" rel="noopener">WhatsApp</a>`
       : '';
     return `<tr>
+      <td class="admin-check"><input type="checkbox" data-order-select="${escapeHtml(order.id)}" aria-label="Выбрать заказ"${selectedOrders.has(order.id) ? ' checked' : ''}></td>
       <td>${escapeHtml(formatDate(order.created_at))}<small>№ ${escapeHtml(order.id.slice(0, 8))}</small></td>
       <td><b>${escapeHtml(order.customer_name)}</b><a href="tel:${escapeHtml(order.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(order.phone)}</a>${whatsappLink}<small>${order.personal_data_consent ? `Согласие получено · ${escapeHtml(order.privacy_policy_version || 'версия не указана')}` : 'Согласие не сохранено'}</small></td>
       <td><ul class="admin-order-items">${itemRows}</ul><small>${escapeHtml(order.branch)}${order.address ? ` · ${escapeHtml(order.address)}` : ''}${order.comment ? ` · ${escapeHtml(order.comment)}` : ''}</small></td>
@@ -209,14 +262,18 @@ function renderOrders() {
       <td>${escapeHtml(order.order_type)}</td>
     </tr>`;
   }).join('');
+  updateSelectionUi('orders', rows.map(order => order.id));
   $('#ordersEmpty').hidden = rows.length > 0;
   $('#ordersEmpty').textContent = orders.length ? 'Заказы не найдены по запросу.' : 'Заказов пока нет.';
 }
 
 function renderClients() {
   const clients = new Map();
+  clientOrderIds = new Map();
   for (const order of orders) {
     const key = order.phone.replace(/\D/g, '');
+    if (!clientOrderIds.has(key)) clientOrderIds.set(key, []);
+    clientOrderIds.get(key).push(order.id);
     const existing = clients.get(key);
     if (existing) {
       existing.orders++;
@@ -227,18 +284,20 @@ function renderClients() {
         existing.phone = order.phone;
       }
     } else {
-      clients.set(key, {name: order.customer_name, phone: order.phone, orders: 1, total: Number(order.total), lastOrder: order.created_at});
+      clients.set(key, {key, name: order.customer_name, phone: order.phone, orders: 1, total: Number(order.total), lastOrder: order.created_at});
     }
   }
   const query = $('#clientSearch').value.trim().toLocaleLowerCase('ru-RU');
   const rows = [...clients.values()].filter(person => `${person.name} ${person.phone}`.toLocaleLowerCase('ru-RU').includes(query));
   $('#clientsTable').innerHTML = rows.map(person => `<tr>
-    <td><b>${escapeHtml(person.name)}</b></td>
+      <td class="admin-check"><input type="checkbox" data-client-select="${escapeHtml(person.key)}" aria-label="Выбрать клиента"${selectedClients.has(person.key) ? ' checked' : ''}></td>
+      <td><b>${escapeHtml(person.name)}</b></td>
     <td><a href="tel:${escapeHtml(person.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(person.phone)}</a></td>
     <td>${person.orders}</td>
     <td>${escapeHtml(formatDate(person.lastOrder))}</td>
     <td><b>${formatPrice(person.total)}</b></td>
   </tr>`).join('');
+  updateSelectionUi('clients', rows.map(person => person.key));
   $('#clientsEmpty').hidden = rows.length > 0;
   $('#clientsEmpty').textContent = clients.size ? 'Клиенты не найдены по запросу.' : 'Клиентов пока нет.';
 }
@@ -258,6 +317,76 @@ function renderMenu() {
   $('#menuEmpty').hidden = visibleItems.length > 0;
   $('#menuEmpty').textContent = menuItems.length ? 'Блюда с таким названием не найдены.' : 'Блюд пока нет. Добавьте позицию через кнопку «Добавить блюдо».';
   $('#menuCount').textContent = query ? `Показано: ${visibleItems.length} из ${menuItems.length}.` : `Всего блюд: ${menuItems.length}.`;
+}
+
+function updateSelectionUi(kind, visibleKeys) {
+  const selected = kind === 'orders' ? selectedOrders : selectedClients;
+  const known = new Set(kind === 'orders' ? orders.map(order => order.id) : clientOrderIds.keys());
+  [...selected].forEach(key => { if (!known.has(key)) selected.delete(key); });
+  const count = selected.size;
+  $(`#${kind}SelectedCount`).textContent = count ? `Выбрано: ${count}` : '';
+  $(`#${kind}DeleteButton`).disabled = count === 0;
+  const all = $(`#${kind}SelectAll`);
+  const visibleSelected = visibleKeys.filter(key => selected.has(key)).length;
+  all.checked = visibleKeys.length > 0 && visibleSelected === visibleKeys.length;
+  all.indeterminate = visibleSelected > 0 && visibleSelected < visibleKeys.length;
+}
+
+function bindSelection(kind, selected, attribute, rerender, visibleKeys) {
+  $(`#${kind}Table`).addEventListener('change', event => {
+    const key = event.target.dataset?.[attribute];
+    if (key === undefined) return;
+    if (event.target.checked) selected.add(key); else selected.delete(key);
+    updateSelectionUi(kind, visibleKeys());
+  });
+  $(`#${kind}SelectAll`).addEventListener('change', event => {
+    for (const key of visibleKeys()) {
+      if (event.target.checked) selected.add(key); else selected.delete(key);
+    }
+    rerender();
+  });
+}
+
+function visibleClientKeys() {
+  return [...$('#clientsTable').querySelectorAll('[data-client-select]')].map(input => input.dataset.clientSelect);
+}
+
+async function deleteOrdersByIds(ids) {
+  for (let index = 0; index < ids.length; index += 100) {
+    const chunk = ids.slice(index, index + 100);
+    const {data, error} = await client.from('orders').delete().in('id', chunk).select('id');
+    if (error) throw error;
+    if ((data?.length || 0) !== chunk.length) throw new Error('База не разрешает удаление. Выполните в Supabase → SQL Editor команду из инструкции (политика Admins delete orders) и повторите.');
+  }
+}
+
+async function deleteSelected(kind) {
+  const ids = kind === 'orders'
+    ? [...selectedOrders]
+    : [...selectedClients].flatMap(key => clientOrderIds.get(key) || []);
+  if (!ids.length) return;
+  const text = kind === 'orders'
+    ? `Удалить выбранные заказы (${selectedOrders.size}) без возможности восстановления?`
+    : `Удалить выбранных клиентов (${selectedClients.size}) вместе со всеми их заказами (${ids.length})? Это нельзя отменить.`;
+  if (!window.confirm(text)) return;
+  const feedback = $('#dashboardFeedback');
+  const button = $(`#${kind}DeleteButton`);
+  button.disabled = true;
+  try {
+    await deleteOrdersByIds(ids);
+    selectedOrders.clear();
+    selectedClients.clear();
+    const refreshed = await refreshDashboard();
+    if (refreshed) setFeedback(feedback, 'Удалено.', true);
+    feedback.scrollIntoView({block: 'center', behavior: 'smooth'});
+  } catch (error) {
+    console.error('Не удалось удалить записи.', error);
+    setFeedback(feedback, `Не удалось удалить: ${error.message || 'ошибка базы данных'}`);
+    await refreshDashboard();
+    setFeedback(feedback, `Не удалось удалить: ${error.message || 'ошибка базы данных'}`);
+    feedback.scrollIntoView({block: 'center', behavior: 'smooth'});
+    window.alert(`Не удалось удалить: ${error.message || 'ошибка базы данных'}`);
+  }
 }
 
 function renderAll() {
@@ -315,17 +444,27 @@ $('#adminLoginForm').addEventListener('submit', async event => {
     setFeedback($('#loginFeedback'), 'Сначала подключите проект Supabase в файле supabase-config.js по инструкции.');
     return;
   }
+  if (Date.now() < lockedUntil) {
+    setFeedback($('#loginFeedback'), `Слишком много попыток. Подождите ${Math.ceil((lockedUntil - Date.now()) / 1000)} сек.`);
+    return;
+  }
   const button = event.submitter;
   button.disabled = true;
   setFeedback($('#loginFeedback'), 'Выполняется вход...');
   const formData = new FormData(event.currentTarget);
   try {
-    const {data, error} = await client.auth.signInWithPassword({email: formData.get('email'), password: formData.get('password')});
+    const {data, error} = await client.auth.signInWithPassword({email: String(formData.get('email')).trim(), password: formData.get('password')});
     if (error) throw error;
     if (!await verifyOwner(data.session)) return;
+    failedLogins = 0;
+    event.target.elements.password.value = '';
   } catch (error) {
     console.error('Не удалось войти в панель владельца.', error);
-    showLogin('Не удалось войти. Проверьте email, пароль и настройку доступа владельца.');
+    failedLogins++;
+    if (failedLogins >= 5) {
+      lockedUntil = Date.now() + 60000 * Math.min(failedLogins - 4, 10);
+    }
+    showLogin('Не удалось войти. Проверьте email и пароль.');
   } finally {
     button.disabled = false;
   }
@@ -339,6 +478,11 @@ $('#logoutButton').addEventListener('click', async () => {
     return;
   }
   showLogin('Вы вышли из панели.');
+  orders = [];
+  menuItems = [];
+  selectedOrders.clear();
+  selectedClients.clear();
+  renderAll();
 });
 
 $('#refreshButton').addEventListener('click', refreshDashboard);
@@ -354,6 +498,10 @@ document.querySelectorAll('.admin-tab').forEach(button => button.addEventListene
 
 $('#orderSearch').addEventListener('input', renderOrders);
 $('#clientSearch').addEventListener('input', renderClients);
+bindSelection('orders', selectedOrders, 'orderSelect', renderOrders, () => visibleOrders().map(order => order.id));
+bindSelection('clients', selectedClients, 'clientSelect', renderClients, visibleClientKeys);
+$('#ordersDeleteButton').addEventListener('click', () => deleteSelected('orders'));
+$('#clientsDeleteButton').addEventListener('click', () => deleteSelected('clients'));
 $('#contactsForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -406,6 +554,7 @@ $('#menuForm').addEventListener('submit', async event => {
   button.disabled = true;
   setFeedback($('#menuFeedback'), '');
   const data = new FormData(form);
+  const itemId = data.get('id');
   try {
     const uploadedImage = await uploadMenuImage(data.get('image_file'));
     const imageUrl = uploadedImage || String(data.get('image_url')).trim();
@@ -426,20 +575,21 @@ $('#menuForm').addEventListener('submit', async event => {
     if (!Number.isSafeInteger(record.price) || record.price < 0 || !Number.isInteger(record.sort_order)) {
       throw new Error('Проверьте цену и порядок показа блюда.');
     }
-    const itemId = data.get('id');
     const result = itemId
-      ? await client.from('menu_items').update(record).in('id', editingMenuIds)
-      : await client.from('menu_items').insert(record);
+      ? await client.from('menu_items').update(record).in('id', editingMenuIds).select('id')
+      : await client.from('menu_items').insert(record).select('id');
     if (result.error) throw result.error;
+    const expectedRows = itemId ? editingMenuIds.length : 1;
+    if (result.data?.length !== expectedRows) {
+      throw new Error(`База обновила ${result.data?.length ?? 0} из ${expectedRows} записей меню.`);
+    }
     closeMenuEditor();
     const refreshed = await refreshDashboard();
-    setFeedback($('#menuFeedback'), refreshed ? 'Блюдо сохранено; изменения появятся на сайте после обновления страницы.' : 'Блюдо сохранено, но список не обновился. Нажмите «Обновить данные».', refreshed);
+    setFeedback($('#menuFeedback'), refreshed ? 'Блюдо сохранено. На открытом сайте обновите страницу или вернитесь на её вкладку.' : 'Блюдо сохранено, но список не обновился. Нажмите «Обновить данные».', refreshed);
   } catch (error) {
     console.error('Не удалось сохранить блюдо.', error);
     const message = typeof error?.message === 'string' ? error.message : '';
-    setFeedback($('#menuFeedback'), message === 'Проверьте цену и порядок показа блюда.' || message === 'Поддерживаются изображения JPEG, PNG, WebP и AVIF.' || message === 'Размер фотографии не должен превышать 8 МБ.'
-      ? message
-      : 'Не удалось сохранить блюдо. Проверьте введённые данные и подключение к базе.');
+    setFeedback($('#menuFeedback'), message || 'Не удалось сохранить блюдо. Проверьте введённые данные и подключение к базе.');
   } finally {
     button.disabled = false;
   }
@@ -465,7 +615,7 @@ $('#deleteMenuButton').addEventListener('click', async () => {
 
 async function initialize() {
   try {
-    client = window.createDoniSupabaseClient?.() || null;
+    client = window.createDoniSupabaseClient?.({auth: {persistSession: true, storage: window.sessionStorage, autoRefreshToken: true, detectSessionInUrl: false}}) || null;
   } catch (error) {
     console.error('Не удалось инициализировать Supabase для панели.', error);
     showLogin('Не удалось загрузить клиент Supabase. Проверьте подключение библиотеки и конфигурацию.');
@@ -474,6 +624,11 @@ async function initialize() {
   if (!client) {
     showLogin('Подключите проект Supabase в файле supabase-config.js, затем выполните шаги из инструкции.');
     return;
+  }
+  try { localStorage.removeItem(Object.keys(localStorage).find(key => /^sb-.*-auth-token/.test(key)) || ''); } catch { /* storage unavailable */ }
+  if (sessionExpired()) {
+    await client.auth.signOut().catch(() => {});
+    clearStoredSessions();
   }
   const {data, error} = await client.auth.getSession();
   if (error) {

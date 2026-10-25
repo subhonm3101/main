@@ -116,6 +116,11 @@ create policy "Admins update orders"
   using (public.is_donishef_admin())
   with check (public.is_donishef_admin());
 
+drop policy if exists "Admins delete orders" on public.orders;
+create policy "Admins delete orders"
+  on public.orders for delete to authenticated
+  using (public.is_donishef_admin());
+
 drop policy if exists "Admins read order items" on public.order_items;
 create policy "Admins read order items"
   on public.order_items for select to authenticated
@@ -136,7 +141,7 @@ revoke all on table public.admin_users, public.menu_items, public.orders, public
 revoke all on sequence public.menu_items_id_seq from public, anon, authenticated;
 grant select on public.menu_items to anon, authenticated;
 grant insert, update, delete on public.menu_items to authenticated;
-grant select, update on public.orders to authenticated;
+grant select, update, delete on public.orders to authenticated;
 grant select on public.order_items to authenticated;
 grant select on public.restaurant_contacts to anon, authenticated;
 grant update on public.restaurant_contacts to authenticated;
