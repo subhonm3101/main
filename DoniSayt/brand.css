@@ -1,0 +1,68 @@
+@font-face {
+  font-family: "Marck Script";
+  src: url("assets/fonts/MarckScript-Regular.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+.logo .logo-name > .logo-d {
+  font-family: "Marck Script", "Segoe Script", cursive;
+  font-weight: 400;
+  font-size: 1.2em;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+  display: inline-block;
+  transform: translateY(.03em);
+}
+.footer-brand .logo .logo-name > .logo-d { color: #fff; }
+.nav-banquet-link { cursor: pointer; }
+body:has(.modal.show, .banquet-page.show) .cookie-banner { display: none; }
+
+.banquet-page { position: fixed; inset: 0; z-index: 300; overflow-y: auto; background: var(--paper); color: var(--ink); animation: banquet-in .35s ease; }
+.banquet-page[hidden] { display: none; }
+@keyframes banquet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.banquet-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px max(20px, calc((100% - 1180px) / 2)); background: rgba(248, 242, 232, .94); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.banquet-back { background: transparent; color: var(--ink); font-weight: 700; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); }
+.banquet-back:hover { border-color: var(--red); color: var(--red); }
+.banquet-bar .logo { font-size: 28px; }
+.banquet-bar .logo small { display: none; }
+.banquet-hero { position: relative; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 48px; width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 48px 0; }
+.banquet-hero img { order: 2; width: 100%; height: min(70vh, 640px); object-fit: cover; border-radius: 24px; box-shadow: var(--shadow); }
+.banquet-hero-text h2 { font: 600 clamp(36px, 5vw, 62px)/1.05 "Playfair Display", Georgia, serif; margin: 10px 0 18px; }
+.banquet-hero-text p:not(.eyebrow) { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 460px; margin: 0 0 26px; }
+.banquet-section { padding: 56px 0; }
+.banquet-container { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+.banquet-section h3 { font: 600 clamp(28px, 3.4vw, 40px)/1.15 "Playfair Display", Georgia, serif; margin: 8px 0 28px; }
+.banquet-features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.banquet-features article { padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--cream); display: grid; gap: 10px; align-content: start; }
+.banquet-features b { font-size: 17px; }
+.banquet-features span { color: var(--muted); line-height: 1.55; }
+.banquet-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+.banquet-gallery img { width: 100%; height: 280px; object-fit: cover; border-radius: 18px; }
+.banquet-form-box label { display: block; margin: 11px 0; font-size: 11px; font-weight: 800; min-width: 0; }
+.banquet-form-box input, .banquet-form-box textarea, .banquet-form-box select { display: block; width: 100%; min-width: 0; max-width: 100%; padding: 12px; margin-top: 6px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); outline: 0; }
+.banquet-form-box input:focus, .banquet-form-box textarea:focus, .banquet-form-box select:focus { border-color: var(--red); }
+.banquet-form-box input[type="date"], .banquet-form-box input[type="time"] { -webkit-appearance: none; appearance: none; min-height: 48px; text-align: left; }
+.banquet-form-box textarea { height: 90px; resize: vertical; }
+.banquet-form-box input[type="checkbox"] { width: auto; margin: 3px 0 0; flex: 0 0 auto; }
+.banquet-form-box .booking-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .banquet-form-box .booking-form-row { grid-template-columns: 1fr; gap: 0; } }
+.banquet-form-box { max-width: 640px; }
+.banquet-form-box select { width: 100%; }
+@media (max-width: 900px) {
+  .banquet-hero { grid-template-columns: 1fr; gap: 24px; padding: 24px 0; }
+  .banquet-hero img { order: 0; height: 320px; }
+  .banquet-features { grid-template-columns: 1fr 1fr; }
+  .banquet-gallery { grid-template-columns: 1fr 1fr; }
+  .banquet-gallery img { height: 200px; }
+}
+@media (max-width: 560px) {
+  .banquet-bar .logo { display: none; }
+  .banquet-features { grid-template-columns: 1fr; }
+  .banquet-section { padding: 36px 0; }
+}
+
+.banquet-dry-note { margin: 0 0 28px; padding: 18px 22px; border-left: 4px solid var(--red); border-radius: 8px; background: #fff; font-size: 17px; line-height: 1.55; color: var(--ink); }
+.banquet-halal .banquet-features { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) { .banquet-halal .banquet-features { grid-template-columns: 1fr; } }

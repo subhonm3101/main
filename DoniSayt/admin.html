@@ -7,15 +7,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#f5f1ea">
-  <title>Панель владельца — DoniШеф</title>
+  <title>Панель владельца — ДониШеф</title>
   <link rel="icon" type="image/webp" href="assets/brand-logo.webp">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="polish.css">
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="brand.css?v=8">
 </head>
 <body class="admin-body">
   <header class="admin-header">
-    <a class="logo" href="index.html"><span class="logo-name">Doni<span>Шеф</span></span><small>ПАНЕЛЬ ВЛАДЕЛЬЦА</small></a>
+    <a class="logo" href="index.html"><span class="logo-name"><span class="logo-d">Д</span>они<span>Шеф</span></span><small>ПАНЕЛЬ ВЛАДЕЛЬЦА</small></a>
     <div class="admin-header-actions"><a href="index.html">На сайт</a><button id="logoutButton" class="admin-quiet-button" type="button" hidden>Выйти</button></div>
   </header>
   <main class="admin-main">
@@ -41,6 +42,7 @@
       <p class="admin-stats-note">Суммы не являются фактической выручкой и не включают отменённые заказы. Показатель «сегодня» рассчитывается по местному времени.</p>
       <nav class="admin-tabs" aria-label="Разделы панели">
         <button class="admin-tab active" type="button" data-tab="orders" aria-selected="true">Заказы</button>
+        <button class="admin-tab" type="button" data-tab="bookings" aria-selected="false">Бронирования</button>
         <button class="admin-tab" type="button" data-tab="clients" aria-selected="false">Клиенты</button>
         <button class="admin-tab" type="button" data-tab="contacts" aria-selected="false">Контакты для звонков</button>
         <button class="admin-tab" type="button" data-tab="menu" aria-selected="false">Меню</button>
@@ -55,6 +57,13 @@
         <p class="admin-empty" id="ordersEmpty" hidden>Заказов пока нет.</p>
       </section>
 
+      <section class="admin-panel" id="bookingsPanel" hidden>
+        <div class="admin-section-heading"><div><h2>Бронирования и банкеты</h2><p>Заявки с сайта: бронь стола и банкеты. Свяжитесь с клиентом, подтвердите дату и поменяйте статус.</p></div><input id="bookingSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск бронирований"></div>
+        <div class="admin-bulk"><span id="bookingsSelectedCount"></span><button class="btn btn-outline admin-danger" id="bookingsDeleteButton" type="button" disabled>Удалить выбранные</button></div>
+        <div class="admin-table-wrap"><table><thead><tr><th class="admin-check"><input type="checkbox" id="bookingsSelectAll" aria-label="Выбрать все бронирования"></th><th>Заявка</th><th>Клиент</th><th>Когда и сколько</th><th>Статус</th></tr></thead><tbody id="bookingsTable"></tbody></table></div>
+        <p class="admin-empty" id="bookingsEmpty" hidden>Бронирований пока нет.</p>
+      </section>
+
       <section class="admin-panel" id="clientsPanel" hidden>
         <div class="admin-section-heading"><div><h2>Клиенты</h2><p>Контакты сгруппированы по номеру телефона из заказов.</p></div><input id="clientSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск клиентов"></div>
         <div class="admin-bulk"><span id="clientsSelectedCount"></span><button class="btn btn-outline admin-danger" id="clientsDeleteButton" type="button" disabled>Удалить выбранных</button></div>
@@ -67,8 +76,8 @@
         <p class="admin-feedback" id="contactsFeedback" role="status" hidden></p>
         <form class="admin-menu-form" id="contactsForm">
           <div class="admin-form-grid">
-            <label>Телефон для звонков<input name="call_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79373231005" pattern="\+[1-9][0-9]{7,14}" required></label>
-            <label>WhatsApp<input name="whatsapp_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79373231005" pattern="\+[1-9][0-9]{7,14}" required></label>
+            <label>Телефон для звонков<input name="call_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
+            <label>WhatsApp<input name="whatsapp_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
             <label>MAX<input name="max_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
           </div>
           <div class="admin-form-actions"><button class="btn btn-primary" type="submit">Сохранить контакты</button></div>
@@ -111,6 +120,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" integrity="sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
   <script src="menu-data.js"></script>
-  <script src="admin.js?v=6"></script>
+  <script src="admin.js?v=9"></script>
 </body>
 </html>

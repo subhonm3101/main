@@ -42,17 +42,17 @@ alter table public.orders add column if not exists privacy_policy_version text;
 
 create table if not exists public.restaurant_contacts (
   id boolean primary key default true check (id),
-  call_phone text not null default '+79373231005' check (call_phone ~ '^\+[1-9][0-9]{7,14}$'),
+  call_phone text not null default '+79191545232' check (call_phone ~ '^\+[1-9][0-9]{7,14}$'),
   whatsapp_phone text not null check (whatsapp_phone ~ '^\+[1-9][0-9]{7,14}$'),
   max_phone text not null check (max_phone ~ '^\+[1-9][0-9]{7,14}$'),
   updated_at timestamptz not null default now()
 );
 
 alter table public.restaurant_contacts
-  add column if not exists call_phone text not null default '+79373231005' check (call_phone ~ '^\+[1-9][0-9]{7,14}$');
+  add column if not exists call_phone text not null default '+79191545232' check (call_phone ~ '^\+[1-9][0-9]{7,14}$');
 
 insert into public.restaurant_contacts (id, call_phone, whatsapp_phone, max_phone)
-values (true, '+79373231005', '+79373231005', '+79191545232')
+values (true, '+79191545232', '+79191545232', '+79191545232')
 on conflict (id) do nothing;
 
 create table if not exists public.order_items (
@@ -319,3 +319,114 @@ create policy "Admins update menu photos"
   on storage.objects for update to authenticated
   using (bucket_id = 'menu-photos' and public.is_donishef_admin())
   with check (bucket_id = 'menu-photos' and public.is_donishef_admin());
+
+-- Бронирования и заявки на банкеты
+create table if not exists public.bookings (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  kind text not null check (kind in ('booking', 'banquet')),
+  customer_name text not null,
+  phone text not null,
+  guests integer not null check (guests between 1 and 300),
+  event_date date not null,
+  event_time time not null,
+  occasion text,
+  comment text,
+  status text not null default 'new' check (status in ('new', 'confirmed', 'completed', 'cancelled')),
+  personal_data_consent boolean not null default false,
+  personal_data_consent_at timestamptz,
+  privacy_policy_version text
+);
+alter table public.bookings enable row level security;
+
+drop policy if exists "Admins read bookings" on public.bookings;
+create policy "Admins read bookings"
+  on public.bookings for select to authenticated
+  using (public.is_donishef_admin());
+
+drop policy if exists "Admins update bookings" on public.bookings;
+create policy "Admins update bookings"
+  on public.bookings for update to authenticated
+  using (public.is_donishef_admin())
+  with check (public.is_donishef_admin());
+
+drop policy if exists "Admins delete bookings" on public.bookings;
+create policy "Admins delete bookings"
+  on public.bookings for delete to authenticated
+  using (public.is_donishef_admin());
+
+grant select, update, delete on public.bookings to authenticated;
+
+drop function if exists public.create_restaurant_booking(text, text, text, integer, date, time, text, text, boolean, text);
+create or replace function public.create_restaurant_booking(
+  p_kind text,
+  p_customer_name text,
+  p_phone text,
+  p_guests integer,
+  p_event_date date,
+  p_event_time time,
+  p_occasion text,
+  p_comment text,
+  p_personal_data_consent boolean,
+  p_privacy_policy_version text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  if p_kind not in ('booking', 'banquet') then
+    raise exception 'Неизвестный тип заявки.';
+  end if;
+  if char_length(trim(coalesce(p_customer_name, ''))) not between 1 and 120 then
+    raise exception 'Укажите имя длиной от 1 до 120 символов.';
+  end if;
+  if trim(coalesce(p_phone, '')) !~ '^\+?[0-9 ()-]{7,20}$' then
+    raise exception 'Укажите корректный номер телефона.';
+  end if;
+  if p_guests is null or p_guests not between 1 and 300 then
+    raise exception 'Количество гостей должно быть от 1 до 300.';
+  end if;
+  if p_event_date is null or p_event_time is null then
+    raise exception 'Укажите дату и время.';
+  end if;
+  if p_event_date < current_date - 1 or p_event_date > current_date + 730 then
+    raise exception 'Укажите корректную дату.';
+  end if;
+  if char_length(coalesce(p_occasion, '')) > 120 or char_length(coalesce(p_comment, '')) > 1000 then
+    raise exception 'Текст слишком длинный.';
+  end if;
+  if p_personal_data_consent is distinct from true then
+    raise exception 'Необходимо согласие на обработку персональных данных.';
+  end if;
+  if p_privacy_policy_version is distinct from '2026-10-v1' then
+    raise exception 'Версия политики конфиденциальности устарела. Обновите страницу и повторите заявку.';
+  end if;
+  if (
+    select count(*) from public.bookings
+    where phone = trim(p_phone) and created_at > now() - interval '1 hour'
+  ) >= 10 then
+    raise exception 'Слишком много заявок с этого номера. Попробуйте позже.';
+  end if;
+
+  insert into public.bookings (kind, customer_name, phone, guests, event_date, event_time, occasion, comment,
+    personal_data_consent, personal_data_consent_at, privacy_policy_version)
+  values (p_kind, trim(p_customer_name), trim(p_phone), p_guests, p_event_date, p_event_time,
+    nullif(trim(coalesce(p_occasion, '')), ''), nullif(trim(coalesce(p_comment, '')), ''),
+    true, now(), p_privacy_policy_version)
+  returning id into v_id;
+
+  return jsonb_build_object('id', v_id);
+end;
+$$;
+
+revoke all on function public.create_restaurant_booking(text, text, text, integer, date, time, text, text, boolean, text) from public;
+grant execute on function public.create_restaurant_booking(text, text, text, integer, date, time, text, text, boolean, text) to anon, authenticated;
+
+-- Усиление защиты (2026-11): лимиты файлов, закрытие листинга, отзыв лишних прав
+update storage.buckets set file_size_limit = 8388608, allowed_mime_types = array['image/jpeg','image/png','image/webp','image/avif'] where id = 'menu-photos';
+drop policy if exists "Public can read menu photos" on storage.objects;
+revoke all on table public.bookings from public, anon;

@@ -5,8 +5,10 @@ const formatPrice = value => `${Number(value).toLocaleString('ru-RU')} ₽`;
 const formatDate = value => new Intl.DateTimeFormat('ru-RU', {dateStyle: 'short', timeStyle: 'short'}).format(new Date(value));
 let client = null;
 let orders = [];
+let bookings = [];
+const selectedBookings = new Set();
 let menuItems = [];
-let restaurantContacts = {call_phone: '+79373231005', whatsapp_phone: '+79373231005', max_phone: '+79191545232'};
+let restaurantContacts = {call_phone: '+79191545232', whatsapp_phone: '+79191545232', max_phone: '+79191545232'};
 let editingMenuIds = [];
 let failedLogins = 0;
 let lockedUntil = 0;
@@ -119,9 +121,15 @@ async function refreshDashboard() {
   const results = await Promise.allSettled([
     fetchAllRows(() => client.from('orders').select('id,created_at,customer_name,phone,order_type,branch,address,comment,total,status,personal_data_consent,privacy_policy_version,order_items(item_name,unit_price,quantity)').order('created_at', {ascending: false}).order('id')),
     fetchAllRows(() => client.from('menu_items').select('*').order('sort_order').order('id')),
-    loadRestaurantContacts()
+    loadRestaurantContacts(),
+    fetchAllRows(() => client.from('bookings').select('id,created_at,kind,customer_name,phone,guests,event_date,event_time,occasion,comment,status,personal_data_consent,privacy_policy_version').order('created_at', {ascending: false}).order('id'))
   ]);
   const failures = [];
+  if (results[3].status === 'fulfilled') bookings = results[3].value;
+  else {
+    console.error('Не удалось загрузить бронирования.', results[3].reason);
+    failures.push('бронирования (выполните обновлённый supabase-schema.sql)');
+  }
   if (results[0].status === 'fulfilled') orders = results[0].value;
   else {
     console.error('Не удалось загрузить заявки.', results[0].reason);
@@ -320,8 +328,8 @@ function renderMenu() {
 }
 
 function updateSelectionUi(kind, visibleKeys) {
-  const selected = kind === 'orders' ? selectedOrders : selectedClients;
-  const known = new Set(kind === 'orders' ? orders.map(order => order.id) : clientOrderIds.keys());
+  const selected = kind === 'orders' ? selectedOrders : kind === 'bookings' ? selectedBookings : selectedClients;
+  const known = new Set(kind === 'orders' ? orders.map(order => order.id) : kind === 'bookings' ? bookings.map(row => row.id) : clientOrderIds.keys());
   [...selected].forEach(key => { if (!known.has(key)) selected.delete(key); });
   const count = selected.size;
   $(`#${kind}SelectedCount`).textContent = count ? `Выбрано: ${count}` : '';
@@ -389,9 +397,59 @@ async function deleteSelected(kind) {
   }
 }
 
+const BOOKING_STATUSES = {new: 'Новая', confirmed: 'Подтверждена', completed: 'Завершена', cancelled: 'Отменена'};
+function visibleBookings() {
+  const query = $('#bookingSearch').value.trim().toLocaleLowerCase('ru-RU');
+  return bookings.filter(row => !query || `${row.customer_name} ${row.phone}`.toLocaleLowerCase('ru-RU').includes(query));
+}
+
+function renderBookings() {
+  const rows = visibleBookings();
+  $('#bookingsTable').innerHTML = rows.map(row => {
+    const phone = row.phone.replace(/\D/g, '');
+    const whatsappLink = phone.length >= 10 && phone.length <= 15
+      ? `<a class="admin-whatsapp-link" href="https://wa.me/${escapeHtml(phone)}" target="_blank" rel="noopener">WhatsApp</a>`
+      : '';
+    const [year, month, day] = String(row.event_date).split('-');
+    const options = Object.entries(BOOKING_STATUSES).map(([value, label]) => `<option value="${value}"${row.status === value ? ' selected' : ''}>${label}</option>`).join('');
+    return `<tr>
+      <td class="admin-check"><input type="checkbox" data-booking-select="${escapeHtml(row.id)}" aria-label="Выбрать бронирование"${selectedBookings.has(row.id) ? ' checked' : ''}></td>
+      <td>${escapeHtml(formatDate(row.created_at))}<small>${row.kind === 'banquet' ? 'Банкет' : 'Бронь стола'}</small></td>
+      <td><b>${escapeHtml(row.customer_name)}</b><a href="tel:${escapeHtml(row.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(row.phone)}</a>${whatsappLink}<small>${row.personal_data_consent ? `Согласие получено · ${escapeHtml(row.privacy_policy_version || 'версия не указана')}` : 'Согласие не сохранено'}</small></td>
+      <td><b>${escapeHtml(`${day}.${month}.${year}`)} · ${escapeHtml(String(row.event_time).slice(0, 5))}</b><small>Гостей: ${Number(row.guests)}${row.occasion ? ` · ${escapeHtml(row.occasion)}` : ''}${row.comment ? ` · ${escapeHtml(row.comment)}` : ''}</small></td>
+      <td><select data-booking-status="${escapeHtml(row.id)}" aria-label="Статус заявки">${options}</select></td>
+    </tr>`;
+  }).join('');
+  updateSelectionUi('bookings', rows.map(row => row.id));
+  $('#bookingsEmpty').hidden = rows.length > 0;
+  $('#bookingsEmpty').textContent = bookings.length ? 'Бронирования не найдены по запросу.' : 'Бронирований пока нет.';
+}
+
+async function deleteSelectedBookings() {
+  const ids = [...selectedBookings];
+  if (!ids.length || !window.confirm(`Удалить выбранные бронирования (${ids.length}) без возможности восстановления?`)) return;
+  const feedback = $('#dashboardFeedback');
+  $('#bookingsDeleteButton').disabled = true;
+  try {
+    for (let index = 0; index < ids.length; index += 100) {
+      const chunk = ids.slice(index, index + 100);
+      const {data, error} = await client.from('bookings').delete().in('id', chunk).select('id');
+      if (error) throw error;
+      if ((data?.length || 0) !== chunk.length) throw new Error('База не разрешает удаление бронирований.');
+    }
+    selectedBookings.clear();
+    if (await refreshDashboard()) setFeedback(feedback, 'Удалено.', true);
+  } catch (error) {
+    console.error('Не удалось удалить бронирования.', error);
+    window.alert(`Не удалось удалить: ${error.message || 'ошибка базы данных'}`);
+    await refreshDashboard();
+  }
+}
+
 function renderAll() {
   renderStats();
   renderOrders();
+  renderBookings();
   renderClients();
   renderMenu();
 }
@@ -460,11 +518,21 @@ $('#adminLoginForm').addEventListener('submit', async event => {
     event.target.elements.password.value = '';
   } catch (error) {
     console.error('Не удалось войти в панель владельца.', error);
-    failedLogins++;
-    if (failedLogins >= 5) {
-      lockedUntil = Date.now() + 60000 * Math.min(failedLogins - 4, 10);
+    const text = String(error?.message || '');
+    let reason = 'Не удалось войти. Проверьте email и пароль.';
+    if (/invalid login credentials/i.test(text)) {
+      failedLogins++;
+      if (failedLogins >= 5) lockedUntil = Date.now() + 60000 * Math.min(failedLogins - 4, 10);
+    } else if (/not confirmed/i.test(text)) {
+      reason = 'Email владельца не подтверждён в Supabase (Authentication → Users → подтвердите пользователя).';
+    } else if (/rate limit|too many/i.test(text)) {
+      reason = 'Слишком много попыток входа. Подождите несколько минут.';
+    } else if (/fetch|network|failed/i.test(text)) {
+      reason = 'Нет связи с сервером Supabase. Проверьте интернет и отключите блокировщики рекламы для этого сайта.';
+    } else {
+      reason = `Вход выполнен, но панель не открылась: ${text || 'ошибка загрузки данных'}`;
     }
-    showLogin('Не удалось войти. Проверьте email и пароль.');
+    showLogin(reason);
   } finally {
     button.disabled = false;
   }
@@ -493,8 +561,30 @@ document.querySelectorAll('.admin-tab').forEach(button => button.addEventListene
     tab.classList.toggle('active', selected);
     tab.setAttribute('aria-selected', String(selected));
   });
-  for (const panel of ['orders', 'clients', 'contacts', 'menu']) $(`#${panel}Panel`).hidden = button.dataset.tab !== panel;
+  for (const panel of ['orders', 'bookings', 'clients', 'contacts', 'menu']) $(`#${panel}Panel`).hidden = button.dataset.tab !== panel;
 }));
+
+$('#bookingSearch').addEventListener('input', renderBookings);
+bindSelection('bookings', selectedBookings, 'bookingSelect', renderBookings, () => visibleBookings().map(row => row.id));
+$('#bookingsDeleteButton').addEventListener('click', deleteSelectedBookings);
+$('#bookingsTable').addEventListener('change', async event => {
+  const id = event.target.dataset?.bookingStatus;
+  if (!id) return;
+  const select = event.target;
+  select.disabled = true;
+  try {
+    const {data, error} = await client.from('bookings').update({status: select.value}).eq('id', id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Статус не изменён.');
+    bookings = bookings.map(row => row.id === id ? {...row, status: select.value} : row);
+  } catch (error) {
+    console.error('Не удалось изменить статус бронирования.', error);
+    window.alert('Не удалось изменить статус. Попробуйте ещё раз.');
+    renderBookings();
+  } finally {
+    select.disabled = false;
+  }
+});
 
 $('#orderSearch').addEventListener('input', renderOrders);
 $('#clientSearch').addEventListener('input', renderClients);

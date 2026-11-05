@@ -1,5 +1,5 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
-let restaurantContacts = {call_phone: '+79373231005', max_phone: '+79191545232'};
+let restaurantContacts = {call_phone: '+79191545232', max_phone: '+79191545232'};
 let contactSettingsPromise = Promise.resolve();
 let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, available: item.available !== false}));
 let supabaseClient = null;
@@ -7,7 +7,7 @@ let serverMenuReady = false;
 try {
   supabaseClient = window.createDoniSupabaseClient?.() || null;
 } catch (error) {
-  console.error('Не удалось подключить онлайн-базу DoniШеф.', error);
+  console.error('Не удалось подключить онлайн-базу ДониШеф.', error);
 }
 serverMenuReady = !supabaseClient;
 
@@ -17,11 +17,9 @@ const PRIVACY_POLICY_VERSION = '2026-10-v1';
 const formatContactPhone = phone => phone.replace(/^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/, '+7 $1 $2-$3-$4');
 function applyRestaurantPhone() {
   document.querySelectorAll('a[href^="tel:"]').forEach(link => {
-    if (link.href.endsWith('79373231005')) {
-      link.href = `tel:${restaurantContacts.call_phone}`;
-      if (link.textContent.includes('937') || link.textContent.includes('323-10-05')) {
-        link.textContent = formatContactPhone(restaurantContacts.call_phone);
-      }
+    link.href = `tel:${restaurantContacts.call_phone}`;
+    if (/^\+7[\s\d-]+$/.test(link.textContent.trim())) {
+      link.textContent = formatContactPhone(restaurantContacts.call_phone);
     }
   });
 }
@@ -60,11 +58,11 @@ heroPhoto.alt = 'Фирменный плов от «Дони» на традиц
 heroPhoto.classList.add('photo-real');
 const aboutPhoto = document.querySelector('.about-art img');
 aboutPhoto.src = asset('restaurant-feast.webp');
-aboutPhoto.alt = 'Восточные блюда DoniШеф, поданные к общему столу';
+aboutPhoto.alt = 'Восточные блюда ДониШеф, поданные к общему столу';
 aboutPhoto.classList.add('photo-real');
 const deliveryPhoto = document.querySelector('.delivery-photo');
 deliveryPhoto.src = asset('restaurant-plov-bowl.webp');
-deliveryPhoto.alt = 'Плов DoniШеф на традиционном блюде';
+deliveryPhoto.alt = 'Плов ДониШеф на традиционном блюде';
 deliveryPhoto.classList.add('photo-real');
 const categoryNames = {'Плов': 'Пловы', 'Первые блюда': 'Супы', Мангал: 'Шашлыки', Торты: 'Десерты'};
 const inquiryCategories = [];
@@ -170,7 +168,7 @@ function openDishModal(id, trigger) {
 
 const branchMap = document.getElementById('branchMap');
 if (!branchMap) throw new Error('Не найдена область карты филиалов.');
-branchMap.setAttribute('aria-label', 'Адреса DoniШеф в Уфе на Яндекс Картах');
+branchMap.setAttribute('aria-label', 'Адреса ДониШеф в Уфе на Яндекс Картах');
 const restaurantMapAddresses = [
   'Уфа, улица Ленина, 30',
   'Уфа, проспект Дружбы Народов, 19/5',
@@ -178,7 +176,7 @@ const restaurantMapAddresses = [
 ];
 const mapAddressSelect = document.createElement('select');
 mapAddressSelect.className = 'branch-map-address-select';
-mapAddressSelect.setAttribute('aria-label', 'Выберите адрес DoniШеф на карте');
+mapAddressSelect.setAttribute('aria-label', 'Выберите адрес ДониШеф на карте');
 mapAddressSelect.innerHTML = restaurantMapAddresses
   .map((address, index) => `<option value="${index}">${escapeHtml(address.replace(/^Уфа,\s*/, ''))}</option>`)
   .join('');
@@ -356,7 +354,7 @@ function addPersonalDataConsent(form, insertBefore) {
   consentLink.href = 'personal-data-consent.pdf';
   consentLink.target = '_blank';
   consentLink.rel = 'noopener';
-  consentLink.textContent = 'Текст согласия';
+  consentLink.textContent = 'Согласие на обработку персональных данных';
   const policyLink = document.createElement('a');
   policyLink.href = 'privacy-policy.pdf';
   policyLink.target = '_blank';
@@ -473,7 +471,7 @@ function buildOrderMessage(data, savedOrder) {
   const dataNotice = savedOrder
     ? 'Данные заказа сохранены в системе ресторана для его обработки.'
     : 'Данные из формы переданы в MAX; заказ не сохранён в базе сайта.';
-  return `Заказ DoniШеф\n${savedOrder?.id ? `Номер заказа: ${savedOrder.id}\n` : ''}\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\n${dataNotice}\nСогласие на обработку персональных данных получено.`;
+  return `Заказ ДониШеф\n${savedOrder?.id ? `Номер заказа: ${savedOrder.id}\n` : ''}\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\n${dataNotice}\nСогласие на обработку персональных данных получено.`;
 }
 async function saveRestaurantOrder(data) {
   if (!supabaseClient) {
@@ -632,7 +630,7 @@ function buildBookingMessage() {
   const guests = Number(data.get('guests'));
   if (!Number.isInteger(guests) || guests < 1 || guests > 100) throw new RangeError('Количество гостей должно быть от 1 до 100.');
   return [
-    'Заявка на бронирование DoniШеф',
+    'Заявка на бронирование ДониШеф',
     `Имя: ${data.get('name')}`,
     `Телефон: ${data.get('phone')}`,
     `Количество гостей: ${guests}`,
@@ -646,6 +644,11 @@ document.getElementById('bookingViaMax').addEventListener('click', async () => {
   if (!bookingForm.reportValidity()) return;
   const message = buildBookingMessage();
   const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
+  try {
+    await saveBookingRequest('booking', new FormData(bookingForm));
+  } catch (error) {
+    console.error('Не удалось сохранить бронирование в Supabase.', error);
+  }
   try {
     await contactSettingsPromise;
     if (navigator.clipboard?.writeText) {
@@ -666,6 +669,107 @@ document.getElementById('bookingViaMax').addEventListener('click', async () => {
   } catch (error) {
     console.error('Не удалось скопировать заявку на бронирование для MAX.', error);
     window.alert('Не удалось загрузить контакты или скопировать заявку. Проверьте подключение и разрешение на буфер обмена, затем попробуйте ещё раз.');
+  }
+});
+async function saveBookingRequest(kind, data) {
+  if (!supabaseClient) throw new Error('Онлайн-база не подключена.');
+  const {data: result, error} = await supabaseClient.rpc('create_restaurant_booking', {
+    p_kind: kind,
+    p_customer_name: data.get('name'),
+    p_phone: data.get('phone'),
+    p_guests: Number(data.get('guests')),
+    p_event_date: data.get('date'),
+    p_event_time: data.get('time'),
+    p_occasion: data.get('occasion') || '',
+    p_comment: data.get('comment') || '',
+    p_personal_data_consent: data.get('personalDataConsent') === 'on',
+    p_privacy_policy_version: PRIVACY_POLICY_VERSION
+  });
+  if (error) throw error;
+  return result;
+}
+const todayIso = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+bookingForm.elements.date.min = todayIso;
+
+const banquetModal = document.getElementById('banquetModal');
+const banquetForm = document.getElementById('banquetForm');
+addPersonalDataConsent(banquetForm, banquetForm.querySelector('.booking-submit-actions'));
+const banquetPhoneInput = banquetForm.elements.phone;
+const banquetStatus = document.getElementById('banquetStatus');
+const closeBanquetButton = document.getElementById('closeBanquetModal');
+let banquetReturnFocus;
+banquetForm.elements.date.min = todayIso;
+banquetPhoneInput.value = '+7 (';
+function updateBanquetPhoneValidity() {
+  const valid = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(banquetPhoneInput.value);
+  banquetPhoneInput.setCustomValidity(valid ? '' : 'Введите 10 цифр номера после +7.');
+}
+banquetPhoneInput.addEventListener('input', () => {
+  const {formatted, caret} = formatRussianPhone(banquetPhoneInput.value, banquetPhoneInput.selectionStart ?? banquetPhoneInput.value.length);
+  banquetPhoneInput.value = formatted;
+  banquetPhoneInput.setSelectionRange(caret, caret);
+  updateBanquetPhoneValidity();
+});
+updateBanquetPhoneValidity();
+banquetModal.setAttribute('role', 'dialog');
+banquetModal.setAttribute('aria-modal', 'true');
+banquetModal.setAttribute('aria-labelledby', 'banquetModalTitle');
+banquetModal.querySelector('h2').id = 'banquetModalTitle';
+function closeBanquetModal() {
+  banquetModal.classList.remove('show');
+  banquetModal.hidden = true;
+  document.body.style.overflow = '';
+  if (banquetReturnFocus instanceof HTMLElement) banquetReturnFocus.focus();
+}
+document.querySelectorAll('[data-open-banquet]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault();
+  banquetReturnFocus = link;
+  banquetStatus.hidden = true;
+  banquetModal.hidden = false;
+  banquetModal.scrollTop = 0;
+  banquetModal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  setMenuOpen(false);
+  closeBanquetButton.focus();
+}));
+closeBanquetButton.addEventListener('click', closeBanquetModal);
+banquetModal.querySelector('[data-close-banquet]').addEventListener('click', event => {
+  event.preventDefault();
+  closeBanquetModal();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+});
+banquetModal.querySelectorAll('[data-banquet-scroll]').forEach(button => button.addEventListener('click', () => {
+  document.getElementById('banquetFormAnchor').scrollIntoView({behavior: 'smooth'});
+}));
+banquetModal.addEventListener('keydown', event => {
+  if (event.key !== 'Tab') return;
+  const focusable = [...banquetModal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]')];
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+document.getElementById('banquetSubmit').addEventListener('click', async event => {
+  if (!banquetForm.reportValidity()) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await saveBookingRequest('banquet', new FormData(banquetForm));
+    banquetForm.reset();
+    banquetPhoneInput.value = '+7 (';
+    updateBanquetPhoneValidity();
+    banquetStatus.textContent = 'Заявка принята. Мы свяжемся с вами по указанному телефону.';
+    banquetStatus.hidden = false;
+  } catch (error) {
+    console.error('Не удалось сохранить заявку на банкет.', error);
+    window.alert('Не удалось отправить заявку. Проверьте подключение и попробуйте ещё раз или позвоните: +7 919 154-52-32.');
+  } finally {
+    button.disabled = false;
   }
 });
 const orderType = document.getElementById('orderType');
@@ -708,6 +812,7 @@ document.addEventListener('keydown', event => {
   if (dishModal.classList.contains('show')) closeDishModal();
   else if (modal.classList.contains('show')) closeOrderModal();
   else if (bookingModal.classList.contains('show')) closeBookingModal();
+  else if (banquetModal.classList.contains('show')) closeBanquetModal();
   else if (cartEl.classList.contains('open')) closeCart();
   setMenuOpen(false);
 });
