@@ -1,6 +1,7 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
-let restaurantContacts = {call_phone: '+79191545232', max_phone: '+79191545232'};
+let restaurantContacts = {call_phone: '+79191545232', whatsapp_phone: '+79191545232'};
 let contactSettingsPromise = Promise.resolve();
+const TELEGRAM_ORDER_USERNAME = 'donishef';
 let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, available: item.available !== false}));
 let supabaseClient = null;
 let serverMenuReady = false;
@@ -16,7 +17,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const PRIVACY_POLICY_VERSION = '2026-10-v1';
 const formatContactPhone = phone => phone.replace(/^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/, '+7 $1 $2-$3-$4');
 function applyRestaurantPhone() {
-  document.querySelectorAll('a[href^="tel:"]').forEach(link => {
+  document.querySelectorAll('a[href^="tel:"]:not(.branch-phone)').forEach(link => {
     link.href = `tel:${restaurantContacts.call_phone}`;
     if (/^\+7[\s\d-]+$/.test(link.textContent.trim())) {
       link.textContent = formatContactPhone(restaurantContacts.call_phone);
@@ -34,9 +35,24 @@ function deduplicateMenuItems(items) {
   }
   return [...uniqueItems.values()];
 }
-const servingNoteFor = item => item.servingNote && !/(бесплатно|подарок)/i.test(item.servingNote)
-  ? item.servingNote
-  : '';
+const isPlov = item => item.cat === 'Плов' || (item.cat === 'Полпорции' && /плов/i.test(item.name));
+function servingNoteFor(item) {
+  const notes = [];
+  if (item.servingNote && !/(бесплатно|подарок)/i.test(item.servingNote)) notes.push(item.servingNote);
+  if (isPlov(item)) notes.push('САЛАТ В ПОДАРОК К ПЛОВУ');
+  return notes.join(' · ');
+}
+function orderServingNote(item, savedNote) {
+  let note = savedNote ?? item.servingNote ?? '';
+  note = note.replace(/ЛЕПЁШКА В ПОДАРОК К КАЖДОМУ БЛЮДУ/gi, 'ЛЕПЁШКА В ПОДАРОК');
+  if (!note && !['Напитки', 'Торты', 'Салаты', 'Гарниры', 'Детское меню'].includes(item.cat)) {
+    note = 'ЛЕПЁШКА В ПОДАРОК';
+  }
+  if (isPlov(item) && !/салат/i.test(note)) {
+    note = [note, 'САЛАТ В ПОДАРОК К ПЛОВУ'].filter(Boolean).join('\n  ');
+  }
+  return note;
+}
 document.documentElement.classList.add('js');
 document.querySelectorAll('.logo').forEach(logo => {
   const name = logo.querySelector('.logo-name');
@@ -186,8 +202,6 @@ mapFallback.target = '_blank';
 mapFallback.rel = 'noopener';
 mapFallback.textContent = 'Открыть в Яндекс Картах ↗';
 const mapFrame = document.createElement('iframe');
-const contactYandexMaps = document.getElementById('contactYandexMaps');
-const contact2Gis = document.getElementById('contact2Gis');
 mapFrame.className = 'branch-map-frame';
 mapFrame.loading = 'lazy';
 mapFrame.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -196,8 +210,6 @@ function showMapAddress() {
   mapFrame.title = `${address} — Яндекс Карты`;
   mapFrame.src = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(address)}&z=16`;
   mapFallback.href = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-  contactYandexMaps.href = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-  contact2Gis.href = `https://2gis.ru/ufa/search/${encodeURIComponent(address)}`;
 }
 mapAddressSelect.addEventListener('change', showMapAddress);
 branchMap.replaceChildren(mapAddressSelect, mapFrame, mapFallback);
@@ -365,14 +377,39 @@ function addPersonalDataConsent(form, insertBefore) {
   form.insertBefore(label, insertBefore);
   return checkbox;
 }
-addPersonalDataConsent(orderForm, orderForm.querySelector('button[type="submit"]'));
-orderForm.querySelector('button[type="submit"] span').textContent = 'Подготовить заказ для MAX';
+const originalOrderSubmit = orderForm.querySelector('button[type="submit"]');
+addPersonalDataConsent(orderForm, originalOrderSubmit);
+const messengerFormActions = document.createElement('div');
+messengerFormActions.className = 'messenger-form-actions';
+[
+  {messenger: 'whatsapp', label: 'WhatsApp', className: 'btn btn-primary full'},
+  {messenger: 'telegram', label: 'Telegram', className: 'btn btn-outline full'}
+].forEach(({messenger, label, className}) => {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.messenger = messenger;
+  button.className = `${className} messenger-submit`;
+  const footerLink = document.querySelector(`.site-footer .social-links a[title="${label}"]`);
+  const icon = footerLink.querySelector('svg').cloneNode(true);
+  const text = document.createElement('span');
+  text.textContent = label;
+  button.append(icon, text);
+  messengerFormActions.append(button);
+});
+orderForm.insertBefore(messengerFormActions, originalOrderSubmit);
+originalOrderSubmit.remove();
+const orderSocialLinks = orderForm.querySelector('.modal-social-links');
+const socialHeading = document.createElement('span');
+socialHeading.className = 'modal-social-heading';
+socialHeading.textContent = 'Мы в соцсетях';
+orderSocialLinks.prepend(socialHeading);
+orderSocialLinks.append(document.querySelector('.site-footer .social-links a[title="Instagram"]').cloneNode(true));
 orderForm.elements.name.maxLength = 120;
 orderForm.elements.address.maxLength = 300;
 orderForm.elements.comment.maxLength = 1000;
 const adminSetupNotice = document.createElement('p');
 adminSetupNotice.className = 'form-note admin-setup-notice';
-adminSetupNotice.textContent = 'Онлайн-учёт заявок пока не подключён: заказы можно отправить в MAX, но они не появятся в панели владельца.';
+adminSetupNotice.textContent = 'Онлайн-учёт заявок пока не подключён: заказы можно отправить в WhatsApp или Telegram, но они не появятся в панели владельца.';
 adminSetupNotice.hidden = Boolean(supabaseClient);
 modal.querySelector('h2').after(adminSetupNotice);
 phoneInput.placeholder = '+7 (___) ___-__-__';
@@ -431,10 +468,32 @@ modal.setAttribute('aria-labelledby', 'orderModalTitle');
 modal.querySelector('h2').id = 'orderModalTitle';
 function closeOrderModal() {
   modal.classList.remove('show');
-  checkoutButton.focus();
+  cartButton.focus();
+}
+function showMessengerOptions(status, message, subject) {
+  const instructions = document.createElement('span');
+  instructions.textContent = `${subject} подготовлен. Выберите мессенджер, затем нажмите «Отправить» в открывшемся чате. До этого чайхана не получит сообщение.`;
+  const actions = document.createElement('span');
+  actions.className = 'messenger-actions';
+  const whatsappLink = document.createElement('a');
+  whatsappLink.className = 'btn btn-primary messenger-option';
+  whatsappLink.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+  whatsappLink.target = '_blank';
+  whatsappLink.rel = 'noopener noreferrer';
+  whatsappLink.textContent = 'Отправить в WhatsApp';
+  const telegramLink = document.createElement('a');
+  telegramLink.className = 'btn btn-outline messenger-option';
+  telegramLink.href = `https://t.me/${TELEGRAM_ORDER_USERNAME}?text=${encodeURIComponent(message)}`;
+  telegramLink.target = '_blank';
+  telegramLink.rel = 'noopener noreferrer';
+  telegramLink.textContent = 'Отправить в Telegram';
+  actions.append(whatsappLink, telegramLink);
+  status.replaceChildren(instructions, actions);
+  status.hidden = false;
 }
 checkoutButton.onclick = () => {
   if (!cart.length) return alert('Сначала добавьте блюда в корзину.');
+  modal.querySelector('h2').textContent = 'Как получить заказ?';
   modal.classList.add('show');
   modal.querySelector('input').focus();
 };
@@ -455,10 +514,15 @@ modal.addEventListener('keydown', event => {
 });
 function buildOrderMessage(data, savedOrder) {
   const items = savedOrder?.items?.length
-    ? savedOrder.items.map(item => `• ${item.name} × ${item.quantity} — ${fmt(Number(item.price) * Number(item.quantity))}${item.serving_note ? `\n  ${item.serving_note}` : ''}`).join('\n')
+    ? savedOrder.items.map(item => {
+      const menuItem = menu.find(entry => entry.name === item.name);
+      if (!menuItem) throw new Error(`Блюдо «${item.name}» отсутствует в загруженном меню.`);
+      const note = orderServingNote(menuItem, item.serving_note);
+      return `• ${item.name} × ${item.quantity} — ${fmt(Number(item.price) * Number(item.quantity))}${note ? `\n  ${note}` : ''}`;
+    }).join('\n')
     : cart.map(row => {
       const item = menu.find(entry => entry.id === row.id);
-      const servingNote = servingNoteFor(item);
+      const servingNote = orderServingNote(item);
       return `• ${item.name} × ${row.qty} — ${fmt(item.price * row.qty)}${servingNote ? `\n  ${servingNote}` : ''}`;
     }).join('\n');
   const total = savedOrder ? Number(savedOrder.total) : cart.reduce((sum, row) => sum + menu.find(item => item.id === row.id).price * row.qty, 0);
@@ -468,10 +532,7 @@ function buildOrderMessage(data, savedOrder) {
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
     data.get('comment') ? `Комментарий: ${data.get('comment')}` : null
   ].filter(Boolean).join('\n');
-  const dataNotice = savedOrder
-    ? 'Данные заказа сохранены в системе ресторана для его обработки.'
-    : 'Данные из формы переданы в MAX; заказ не сохранён в базе сайта.';
-  return `Заказ ДониШеф\n${savedOrder?.id ? `Номер заказа: ${savedOrder.id}\n` : ''}\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}\n\n${dataNotice}\nСогласие на обработку персональных данных получено.`;
+  return `Заказ ДониШеф\n\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}`;
 }
 async function saveRestaurantOrder(data) {
   if (!supabaseClient) {
@@ -495,91 +556,76 @@ async function saveRestaurantOrder(data) {
   }
   return orderId;
 }
-document.getElementById('orderForm').addEventListener('submit', async event => {
+orderForm.querySelectorAll('[data-messenger]').forEach(button => button.addEventListener('click', async event => {
+  if (!orderForm.reportValidity()) return;
   if (!/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(phoneInput.value)) {
-    event.preventDefault();
     updatePhoneValidity();
     phoneInput.reportValidity();
     phoneInput.focus();
     return;
   }
-  event.preventDefault();
-  const data = new FormData(event.target);
-  const submitButton = event.submitter;
-  if (submitButton) submitButton.disabled = true;
+  const data = new FormData(orderForm);
+  const selectedMessenger = event.currentTarget.dataset.messenger;
+  const messengerButtons = [...orderForm.querySelectorAll('[data-messenger]')];
+  messengerButtons.forEach(messengerButton => { messengerButton.disabled = true; });
   const unavailableItem = cart.find(row => menu.find(item => item.id === row.id)?.available === false);
   if (unavailableItem) {
     const itemName = menu.find(item => item.id === unavailableItem.id)?.name || 'Блюдо';
     window.alert(`«${itemName}» сейчас на стопе. Удалите его из корзины, чтобы продолжить.`);
-    if (submitButton) submitButton.disabled = false;
+    messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
     return;
   }
-  const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
+  const messengerWindow = window.open('about:blank', '_blank');
+  if (!messengerWindow) {
+    window.alert('Разрешите всплывающие окна для сайта, чтобы открыть мессенджер.');
+    messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
+    return;
+  }
+  messengerWindow.opener = null;
   let savedOrder = null;
   try {
     await contactSettingsPromise;
   } catch (error) {
-    console.error('Не удалось загрузить контакты ресторана.', error);
-    maxWindow?.close();
-    window.alert('Не удалось загрузить контакты ресторана. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
-    if (submitButton) submitButton.disabled = false;
+    console.error('Не удалось загрузить контакты чайханы.', error);
+    messengerWindow.close();
+    window.alert('Не удалось загрузить контакты чайханы. Заказ не отправлен. Проверьте подключение к интернету и попробуйте снова.');
+    messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
     return;
   }
   try {
     savedOrder = await saveRestaurantOrder(data);
   } catch (error) {
     console.error('Не удалось сохранить заказ в Supabase.', error);
-    window.alert('Не удалось сохранить заказ в онлайн-панели Supabase. Текст заказа будет скопирован для отправки в MAX.');
+    window.alert('Не удалось сохранить заказ в панели. Продолжите отправку через выбранный мессенджер и сообщите об этом владельцу.');
   }
-  const orderMessage = buildOrderMessage(data, savedOrder);
+  let orderMessage;
   try {
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(orderMessage);
-      } catch (error) {
-        console.warn('Буфер обмена браузера отклонил запись; используем резервный способ.', error);
-        copyOrderWithSelection(orderMessage);
-      }
-    } else {
-      copyOrderWithSelection(orderMessage);
-    }
-    const status = document.getElementById('maxOrderStatus');
-    status.textContent = maxWindow
-      ? `Текст заказа скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`
-      : `Текст заказа скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`;
-    status.hidden = false;
+    orderMessage = buildOrderMessage(data, savedOrder);
   } catch (error) {
-    console.error('Не удалось скопировать заказ для MAX.', error);
-    maxWindow?.close();
-    window.alert('Не удалось скопировать заказ для MAX. Проверьте разрешение на буфер обмена и попробуйте снова.');
-    if (submitButton) submitButton.disabled = false;
+    console.error('Не удалось подготовить сообщение заказа.', error);
+    messengerWindow.close();
+    window.alert('Не удалось подготовить текст заказа. Если заказ уже сохранён в панели, свяжитесь с чайханой по телефону, чтобы избежать повторной заявки.');
+    messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
     return;
   }
+  const orderUrl = selectedMessenger === 'whatsapp'
+    ? `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(orderMessage)}`
+    : `https://t.me/${TELEGRAM_ORDER_USERNAME}?text=${encodeURIComponent(orderMessage)}`;
+  messengerWindow.location.replace(orderUrl);
   cart = [];
   saveCart();
   modal.classList.remove('show');
   closeCart();
-  event.target.reset();
+  orderForm.reset();
+  messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
   phoneInput.value = '+7 (';
   updatePhoneValidity();
   updateAddressRequirement();
-});
-function copyOrderWithSelection(message) {
-  const textarea = document.createElement('textarea');
-  textarea.value = message;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  document.body.append(textarea);
-  textarea.select();
-  const copied = document.execCommand('copy');
-  textarea.remove();
-  if (!copied) throw new Error('Браузер не разрешил скопировать текст заказа.');
-}
+}));
 const bookingModal = document.getElementById('bookingModal');
 const bookingForm = document.getElementById('bookingForm');
 addPersonalDataConsent(bookingForm, bookingForm.querySelector('.booking-submit-actions'));
-document.getElementById('bookingViaMax').textContent = 'Подготовить заявку для MAX';
+document.getElementById('bookingViaMax').textContent = 'Открыть WhatsApp / Telegram';
 const bookingPhoneInput = bookingForm.elements.phone;
 const closeBookingButton = document.getElementById('closeBookingModal');
 let bookingReturnFocus;
@@ -637,13 +683,11 @@ function buildBookingMessage() {
     `Дата: ${data.get('date')}`,
     `Время начала: ${data.get('time')}`,
     data.get('comment') ? `Пожелания: ${data.get('comment')}` : null,
-    'Согласие на обработку персональных данных получено.'
   ].filter(Boolean).join('\n');
 }
 document.getElementById('bookingViaMax').addEventListener('click', async () => {
   if (!bookingForm.reportValidity()) return;
   const message = buildBookingMessage();
-  const maxWindow = window.open('https://max.ru/', '_blank', 'noopener,noreferrer');
   try {
     await saveBookingRequest('booking', new FormData(bookingForm));
   } catch (error) {
@@ -651,24 +695,11 @@ document.getElementById('bookingViaMax').addEventListener('click', async () => {
   }
   try {
     await contactSettingsPromise;
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(message);
-      } catch (error) {
-        console.warn('Буфер обмена браузера отклонил запись; используем резервный способ.', error);
-        copyOrderWithSelection(message);
-      }
-    } else {
-      copyOrderWithSelection(message);
-    }
-    const status = document.getElementById('bookingMaxStatus');
-    status.textContent = maxWindow
-      ? `Текст заявки скопирован. Найдите в MAX номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`
-      : `Текст заявки скопирован. Откройте MAX, найдите номер ${formatContactPhone(restaurantContacts.max_phone)} и вставьте сообщение.`;
-    status.hidden = false;
+    showMessengerOptions(document.getElementById('bookingMaxStatus'), message, 'Заявка');
+    document.getElementById('bookingMaxStatus').querySelector('a')?.focus();
   } catch (error) {
-    console.error('Не удалось скопировать заявку на бронирование для MAX.', error);
-    window.alert('Не удалось загрузить контакты или скопировать заявку. Проверьте подключение и разрешение на буфер обмена, затем попробуйте ещё раз.');
+    console.error('Не удалось подготовить ссылки для заявки на бронирование.', error);
+    window.alert('Не удалось загрузить контакты чайханы. Проверьте подключение и попробуйте ещё раз.');
   }
 });
 async function saveBookingRequest(kind, data) {
@@ -691,87 +722,6 @@ async function saveBookingRequest(kind, data) {
 const todayIso = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 bookingForm.elements.date.min = todayIso;
 
-const banquetModal = document.getElementById('banquetModal');
-const banquetForm = document.getElementById('banquetForm');
-addPersonalDataConsent(banquetForm, banquetForm.querySelector('.booking-submit-actions'));
-const banquetPhoneInput = banquetForm.elements.phone;
-const banquetStatus = document.getElementById('banquetStatus');
-const closeBanquetButton = document.getElementById('closeBanquetModal');
-let banquetReturnFocus;
-banquetForm.elements.date.min = todayIso;
-banquetPhoneInput.value = '+7 (';
-function updateBanquetPhoneValidity() {
-  const valid = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(banquetPhoneInput.value);
-  banquetPhoneInput.setCustomValidity(valid ? '' : 'Введите 10 цифр номера после +7.');
-}
-banquetPhoneInput.addEventListener('input', () => {
-  const {formatted, caret} = formatRussianPhone(banquetPhoneInput.value, banquetPhoneInput.selectionStart ?? banquetPhoneInput.value.length);
-  banquetPhoneInput.value = formatted;
-  banquetPhoneInput.setSelectionRange(caret, caret);
-  updateBanquetPhoneValidity();
-});
-updateBanquetPhoneValidity();
-banquetModal.setAttribute('role', 'dialog');
-banquetModal.setAttribute('aria-modal', 'true');
-banquetModal.setAttribute('aria-labelledby', 'banquetModalTitle');
-banquetModal.querySelector('h2').id = 'banquetModalTitle';
-function closeBanquetModal() {
-  banquetModal.classList.remove('show');
-  banquetModal.hidden = true;
-  document.body.style.overflow = '';
-  if (banquetReturnFocus instanceof HTMLElement) banquetReturnFocus.focus();
-}
-document.querySelectorAll('[data-open-banquet]').forEach(link => link.addEventListener('click', event => {
-  event.preventDefault();
-  banquetReturnFocus = link;
-  banquetStatus.hidden = true;
-  banquetModal.hidden = false;
-  banquetModal.scrollTop = 0;
-  banquetModal.classList.add('show');
-  document.body.style.overflow = 'hidden';
-  setMenuOpen(false);
-  closeBanquetButton.focus();
-}));
-closeBanquetButton.addEventListener('click', closeBanquetModal);
-banquetModal.querySelector('[data-close-banquet]').addEventListener('click', event => {
-  event.preventDefault();
-  closeBanquetModal();
-  window.scrollTo({top: 0, behavior: 'smooth'});
-});
-banquetModal.querySelectorAll('[data-banquet-scroll]').forEach(button => button.addEventListener('click', () => {
-  document.getElementById('banquetFormAnchor').scrollIntoView({behavior: 'smooth'});
-}));
-banquetModal.addEventListener('keydown', event => {
-  if (event.key !== 'Tab') return;
-  const focusable = [...banquetModal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]')];
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-});
-document.getElementById('banquetSubmit').addEventListener('click', async event => {
-  if (!banquetForm.reportValidity()) return;
-  const button = event.currentTarget;
-  button.disabled = true;
-  try {
-    await saveBookingRequest('banquet', new FormData(banquetForm));
-    banquetForm.reset();
-    banquetPhoneInput.value = '+7 (';
-    updateBanquetPhoneValidity();
-    banquetStatus.textContent = 'Заявка принята. Мы свяжемся с вами по указанному телефону.';
-    banquetStatus.hidden = false;
-  } catch (error) {
-    console.error('Не удалось сохранить заявку на банкет.', error);
-    window.alert('Не удалось отправить заявку. Проверьте подключение и попробуйте ещё раз или позвоните: +7 919 154-52-32.');
-  } finally {
-    button.disabled = false;
-  }
-});
 const orderType = document.getElementById('orderType');
 const addressField = document.getElementById('addressField');
 const addressInput = addressField.querySelector('input');
@@ -812,7 +762,6 @@ document.addEventListener('keydown', event => {
   if (dishModal.classList.contains('show')) closeDishModal();
   else if (modal.classList.contains('show')) closeOrderModal();
   else if (bookingModal.classList.contains('show')) closeBookingModal();
-  else if (banquetModal.classList.contains('show')) closeBanquetModal();
   else if (cartEl.classList.contains('open')) closeCart();
   setMenuOpen(false);
 });
@@ -886,20 +835,20 @@ async function loadMenuFromSupabase() {
 }
 if (supabaseClient) {
   contactSettingsPromise = supabaseClient.from('restaurant_contacts')
-    .select('call_phone,max_phone')
+    .select('call_phone,whatsapp_phone')
     .eq('id', true)
     .single()
     .then(({data, error}) => {
       if (error) throw error;
-      if (!data || !/^\+[1-9]\d{7,14}$/.test(data.call_phone) || !/^\+[1-9]\d{7,14}$/.test(data.max_phone)) {
-        throw new Error('Контакты ресторана отсутствуют или имеют неверный формат.');
+      if (!data || !/^\+[1-9]\d{7,14}$/.test(data.call_phone) || !/^\+[1-9]\d{7,14}$/.test(data.whatsapp_phone)) {
+        throw new Error('Контакты чайханы отсутствуют или имеют неверный формат.');
       }
       restaurantContacts = data;
       applyRestaurantPhone();
     });
   contactSettingsPromise.catch(error => {
-    console.error('Не удалось загрузить контакты ресторана из онлайн-базы.', error);
-    adminSetupNotice.textContent = 'Не удалось загрузить контакты ресторана. Оформление заказа недоступно до восстановления подключения.';
+    console.error('Не удалось загрузить контакты чайханы из онлайн-базы.', error);
+    adminSetupNotice.textContent = 'Не удалось загрузить контакты чайханы. Оформление заказа недоступно до восстановления подключения.';
     adminSetupNotice.hidden = false;
   });
   loadMenuFromSupabase().catch(error => {

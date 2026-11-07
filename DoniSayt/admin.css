@@ -12,6 +12,7 @@
 .admin-login-card .eyebrow, .admin-title-row .eyebrow { margin: 0 0 10px; }
 .admin-muted, .admin-section-heading p { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .admin-login-card form, .admin-menu-form { display: grid; gap: 16px; }
+.admin-menu-form[hidden], #deleteMenuButton[hidden] { display: none; }
 .admin-main label { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 700; }
 .admin-main input, .admin-main select, .admin-main textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: 500 14px Manrope, sans-serif; }
 .admin-main textarea { resize: vertical; }
@@ -60,6 +61,17 @@
 .admin-span-two { grid-column: span 2; }
 .admin-checkbox { display: flex !important; grid-column: span 2; align-items: center; }
 .admin-menu-list { display: grid; gap: 8px; }
+.admin-vacancy-list { display: grid; gap: 10px; }
+.admin-vacancy-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 7px; overflow-wrap: anywhere; }
+.admin-vacancy-item > div { min-width: 0; }
+.admin-vacancy-item p { margin: 6px 0 0; color: var(--muted); font-size: 13px; white-space: pre-wrap; }
+.admin-vacancy-item button { flex-shrink: 0; }
+.admin-vacancy-address { margin-top: 12px; }
+.admin-vacancy-address select { margin-top: 4px; }
+.admin-vacancy-address button { margin-top: 8px; }
+@media (max-width: 460px) {
+  .admin-vacancy-item { flex-direction: column; }
+}
 .admin-menu-item { display: grid; grid-template-columns: 62px minmax(150px, 1fr) auto auto; align-items: center; gap: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; }
 .admin-menu-item img { width: 62px; height: 56px; border-radius: 5px; background: #ece6dc; object-fit: cover; }
 .admin-menu-item b, .admin-menu-item small { display: block; }
@@ -94,6 +106,9 @@
 }
 .admin-menu-filters { margin: 0 0 16px; }
 .admin-menu-filters input { width: min(320px, 100%); }
+.admin-menu-categories { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.admin-menu-category { min-height: 38px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; }
+.admin-menu-category[aria-pressed="true"] { border-color: var(--dark); background: var(--dark); color: #fff; }
 .admin-menu-item { grid-template-columns: 62px minmax(150px, 1fr) auto auto auto; }
 .admin-stock-button { min-height: 34px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 6px; background: #e7f1e8; color: #276b3c; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .admin-stock-button[aria-pressed="false"] { background: #f7e7e2; color: #963b2c; }

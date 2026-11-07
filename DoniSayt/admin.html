@@ -11,7 +11,7 @@
   <link rel="icon" type="image/webp" href="assets/brand-logo.webp">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="polish.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=4">
   <link rel="stylesheet" href="brand.css?v=8">
 </head>
 <body class="admin-body">
@@ -23,7 +23,7 @@
     <section class="admin-login-card" id="loginScreen">
       <p class="eyebrow">ЗАЩИЩЁННЫЙ ДОСТУП</p>
       <h1>Панель владельца</h1>
-      <p class="admin-muted">Войдите, чтобы управлять заказами, клиентами, контактами ресторана и меню.</p>
+      <p class="admin-muted">Войдите, чтобы управлять заказами, клиентами, контактами чайханы и меню.</p>
       <form id="adminLoginForm">
         <label>Email<input type="email" name="email" id="adminEmail" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
         <label>Пароль<input type="password" name="password" id="adminPassword" autocomplete="current-password" minlength="8" required></label>
@@ -34,7 +34,7 @@
 
     <section id="adminDashboard" hidden>
       <div class="admin-title-row">
-        <div><p class="eyebrow">УПРАВЛЕНИЕ РЕСТОРАНОМ</p><h1>Панель владельца</h1></div>
+        <div><p class="eyebrow">УПРАВЛЕНИЕ ЧАЙХАНОЙ</p><h1>Панель владельца</h1></div>
         <button class="btn btn-outline admin-refresh" id="refreshButton" type="button">Обновить данные</button>
       </div>
       <p class="admin-feedback" id="dashboardFeedback" role="status" hidden></p>
@@ -46,10 +46,11 @@
         <button class="admin-tab" type="button" data-tab="clients" aria-selected="false">Клиенты</button>
         <button class="admin-tab" type="button" data-tab="contacts" aria-selected="false">Контакты для звонков</button>
         <button class="admin-tab" type="button" data-tab="menu" aria-selected="false">Меню</button>
+        <button class="admin-tab" type="button" data-tab="vacancies" aria-selected="false">Вакансии</button>
       </nav>
 
       <section class="admin-panel" id="ordersPanel">
-        <div class="admin-section-heading"><div><h2>Заказы</h2><p>Здесь отображаются заявки за весь период. Создание заявки на сайте не подтверждает, что клиент отправил сообщение в мессенджере. Свяжитесь с клиентом по телефону или через WhatsApp. WhatsApp/MAX не сообщает сайту, отправлено ли сообщение.</p></div>
+        <div class="admin-section-heading"><div><h2>Заказы</h2><p>Здесь отображаются заявки за весь период. Создание заявки на сайте не подтверждает, что клиент отправил сообщение в мессенджере. Свяжитесь с клиентом по телефону, WhatsApp или Telegram. Сайт не получает подтверждение отправки сообщения.</p></div>
           <div class="admin-filters"><input id="orderSearch" type="search" placeholder="Имя или телефон" aria-label="Поиск заказов"></div>
         </div>
         <div class="admin-bulk"><span id="ordersSelectedCount"></span><button class="btn btn-outline admin-danger" id="ordersDeleteButton" type="button" disabled>Удалить выбранные</button></div>
@@ -72,13 +73,12 @@
       </section>
 
       <section class="admin-panel" id="contactsPanel" hidden>
-        <div class="admin-section-heading"><div><h2>Контакты для звонков</h2><p>Измените телефон ресторана и номера, на которые клиенты отправляют заказы и заявки. Указывайте номера в международном формате, например +79191545232.</p></div></div>
+        <div class="admin-section-heading"><div><h2>Контакты для звонков</h2><p>Укажите телефон чайханы и WhatsApp в международном формате, например +79191545232. Заказы в Telegram открываются по аккаунту @donishef.</p></div></div>
         <p class="admin-feedback" id="contactsFeedback" role="status" hidden></p>
         <form class="admin-menu-form" id="contactsForm">
           <div class="admin-form-grid">
             <label>Телефон для звонков<input name="call_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
             <label>WhatsApp<input name="whatsapp_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
-            <label>MAX<input name="max_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+79191545232" pattern="\+[1-9][0-9]{7,14}" required></label>
           </div>
           <div class="admin-form-actions"><button class="btn btn-primary" type="submit">Сохранить контакты</button></div>
         </form>
@@ -89,10 +89,27 @@
         </div>
       </section>
 
+      <section class="admin-panel" id="vacanciesPanel" hidden>
+        <div class="admin-section-heading"><div><h2>Вакансии</h2><p>Добавляйте и удаляйте вакансии на сайте. Соискатели могут позвонить по номеру чайханы.</p></div></div>
+        <p class="admin-feedback" id="vacanciesFeedback" role="status" hidden></p>
+        <form class="admin-menu-form" id="vacancyForm">
+          <div class="admin-form-grid">
+            <label>Название вакансии<input name="title" maxlength="120" required></label>
+            <label>Зарплата (необязательно)<input name="salary" maxlength="120" placeholder="Например, от 50 000 ₽"></label>
+            <label class="admin-span-two">Адрес работы<select name="address" required><option value="">Выберите филиал</option><option>Уфа, улица Ленина, 30</option><option>Уфа, проспект Дружбы Народов, 19/5</option><option>Уфа, проспект Дружбы Народов, 21/2</option></select></label>
+            <label class="admin-span-two">Условия и описание<textarea name="description" maxlength="2000" rows="4" required></textarea></label>
+          </div>
+          <div class="admin-form-actions"><button class="btn btn-primary" type="submit">Добавить вакансию</button></div>
+        </form>
+        <div class="admin-vacancy-list" id="adminVacanciesList"></div>
+        <p class="admin-empty" id="adminVacanciesEmpty" hidden>Вакансий пока нет.</p>
+      </section>
+
       <section class="admin-panel" id="menuPanel" hidden>
         <div class="admin-section-heading"><div><h2>Меню</h2><p>Цены и изменения сразу появятся на основном сайте. Наличие каждого блюда можно переключить в списке. <span id="menuCount"></span></p></div><div class="admin-menu-actions"><button class="btn btn-primary" id="addMenuButton" type="button">Добавить блюдо</button></div></div>
         <p class="admin-feedback" id="menuFeedback" role="status" hidden></p>
         <div class="admin-filters admin-menu-filters"><input id="menuSearch" type="search" placeholder="Найти блюдо по названию" aria-label="Поиск блюд по названию"></div>
+        <div class="admin-menu-categories" id="menuCategoryFilters" role="group" aria-label="Категории блюд"></div>
         <form class="admin-menu-form" id="menuForm" hidden>
           <div class="admin-form-heading"><h3 id="menuFormTitle">Новое блюдо</h3><button class="admin-quiet-button" id="cancelMenuEdit" type="button">Отмена</button></div>
           <input type="hidden" name="id">
@@ -120,6 +137,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" integrity="sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
   <script src="menu-data.js"></script>
-  <script src="admin.js?v=9"></script>
+  <script src="admin.js?v=14"></script>
 </body>
 </html>

@@ -44,6 +44,16 @@ window.DONISHEF_MENU_SEED = [
   {id:40,name:'RC Cola',cat:'Напитки',price:200,weight:'1 л',desc:'Газированный напиток',image:"assets/optimized/rc-cola.webp",photo:true},
   {id:41,name:'Натахтари · вкус на выбор',cat:'Напитки',price:150,weight:'Бутылка',desc:'Лимонад Натахтари. Вкус уточняйте при заказе',image:"assets/optimized/natakhtari.webp",photo:true},
   {id:42,name:'Ассорти тортов',cat:'Торты',price:300,weight:'Кусочек',desc:'Выбор тортов уточняйте при заказе',image:"assets/optimized/assorted-cakes.webp",photo:true},
-  {id:43,name:'Медовик',cat:'Торты',price:300,weight:'Кусочек',desc:'Медовый торт с нежным кремом',image:"assets/optimized/medovik.webp",photo:true},
-  {id:44,name:'Турецкая пахлава',cat:'Торты',price:300,weight:'Порция',desc:'Турецкая пахлава',image:"assets/optimized/owner-desserts.webp",photo:true}
+  {id:43,name:'Медовик',cat:'Торты',price:250,weight:'Кусочек',desc:'Медовый торт с нежным кремом',image:"assets/optimized/new-medovik.webp",photo:true},
+  {id:44,name:'Турецкая пахлава',cat:'Торты',price:300,weight:'Порция',desc:'Турецкая пахлава',image:"assets/optimized/owner-desserts.webp",photo:true},
+  {id:52,name:'Соленья',cat:'Салаты',price:150,weight:'Порция',desc:'Закуска — соленья',image:"assets/optimized/new-pickles.webp",photo:true},
+  {id:53,name:'Кимчи',cat:'Салаты',price:100,weight:'Порция',desc:'Закуска — кимчи',image:"assets/optimized/new-kimchi.webp",photo:true},
+  {id:54,name:'Сузма',cat:'Салаты',price:100,weight:'Порция',desc:'Закуска — сузма',image:"assets/optimized/new-suzma.webp",photo:true},
+  {id:55,name:'Овощи в томате',cat:'Салаты',price:150,weight:'Порция',desc:'Закуска — овощи в томате',image:"assets/optimized/new-tomato-vegetables.webp",photo:true},
+  {id:56,name:'Морковь по-корейски',cat:'Салаты',price:100,weight:'Порция',desc:'Закуска — морковь по-корейски',image:"assets/optimized/new-korean-carrot.webp",photo:true},
+  {id:57,name:'Ягодный пирог',cat:'Торты',price:250,weight:'Кусочек',desc:'Ягодный пирог',image:"assets/optimized/new-berry-pie.webp",photo:true},
+  {id:58,name:'Орео',cat:'Торты',price:250,weight:'Кусочек',desc:'Торт «Орео»',image:"assets/optimized/new-oreo.webp",photo:true},
+  {id:59,name:'Красный бархат',cat:'Торты',price:250,weight:'Кусочек',desc:'Торт «Красный бархат»',image:"assets/optimized/new-red-velvet.webp",photo:true},
+  {id:60,name:'Пахлава · рулетики',cat:'Торты',price:200,weight:'Порция',desc:'Восточная сладость — пахлава',image:"assets/optimized/new-baklava-rolls.webp",photo:true},
+  {id:61,name:'Пахлава · кусочек',cat:'Торты',price:250,weight:'Кусочек',desc:'Восточная сладость — пахлава',image:"assets/optimized/new-baklava-slice.webp",photo:true}
 ];

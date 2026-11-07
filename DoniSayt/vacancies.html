@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; font-src 'self' data:; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Актуальные вакансии чайханы ДониШеф в Уфе. Присоединяйтесь к нашей команде.">
+  <meta name="theme-color" content="#f5f1ea">
+  <title>Вакансии — ДониШеф, Уфа</title>
+  <link rel="canonical" href="https://donishef.ru/vacancies.html">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" href="/assets/logo-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/logo-192.png">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="enhancements.css"><link rel="stylesheet" href="visuals.css">
+  <link rel="stylesheet" href="polish.css?v=12"><link rel="stylesheet" href="brand.css?v=40">
+</head>
+<body>
+  <header class="header vacancies-header"><div class="container nav"><a class="logo" href="index.html" aria-label="ДониШеф, на главную"><img class="brand-mark" src="assets/brand-logo.webp" alt="" width="52" height="52"><span class="brand-copy"><span class="logo-name"><span class="logo-d">Д</span>они<span>Шеф</span></span><small>ЧАЙХАНА ВОСТОЧНОЙ КУХНИ</small></span></a><nav id="siteNav" aria-label="Основная навигация"><a href="index.html#menu">Меню</a><a href="index.html#about">О чайхане</a><a href="index.html#delivery">Доставка</a><a href="index.html#banquets" class="nav-banquet-link">Банкеты</a><a href="index.html#contacts">Контакты</a><a href="vacancies.html" aria-current="page">Вакансии</a></nav><div class="nav-actions"><button class="burger" id="burger" type="button" aria-label="Открыть меню" aria-controls="siteNav" aria-expanded="false">☰</button></div></div></header>
+  <main class="vacancies-page">
+    <section class="section vacancies-section" aria-labelledby="vacanciesTitle"><div class="container">
+      <p class="eyebrow">РАБОТА В ДОНИШЕФ</p>
+      <h1 id="vacanciesTitle">Присоединяйтесь<br><em>к нашей команде.</em></h1>
+      <p class="vacancies-intro">Актуальные вакансии чайханы в Уфе. Чтобы узнать подробности, позвоните нам.</p>
+      <p id="vacanciesStatus" class="vacancies-status" role="status">Загружаем вакансии...</p>
+      <p id="vacanciesContactStatus" class="vacancies-status" role="status" hidden></p>
+      <div class="vacancies-grid" id="vacanciesList"></div>
+    </div></section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" integrity="sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK" crossorigin="anonymous"></script>
+  <script src="supabase-config.js"></script>
+  <script src="vacancies.js?v=3"></script>
+</body>
+</html>

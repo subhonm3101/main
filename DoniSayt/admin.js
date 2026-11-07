@@ -8,7 +8,11 @@ let orders = [];
 let bookings = [];
 const selectedBookings = new Set();
 let menuItems = [];
-let restaurantContacts = {call_phone: '+79191545232', whatsapp_phone: '+79191545232', max_phone: '+79191545232'};
+let selectedMenuCategory = '';
+const menuCategoryNames = {'Плов': 'Пловы', 'Первые блюда': 'Супы', 'Мангал': 'Шашлыки', 'Торты': 'Десерты'};
+const menuCategoryOrder = ['Плов', 'Первые блюда', 'Вторые блюда', 'Мангал', 'Гарниры', 'Детское меню', 'Салаты', 'Полпорции', 'Торты', 'Напитки'];
+let vacancies = [];
+let restaurantContacts = {call_phone: '+79191545232', whatsapp_phone: '+79191545232'};
 let editingMenuIds = [];
 let failedLogins = 0;
 let lockedUntil = 0;
@@ -51,6 +55,7 @@ async function expireSession() {
   clearStoredSessions();
   orders = [];
   menuItems = [];
+  vacancies = [];
   renderAll();
   showLogin('Сеанс завершён из-за бездействия. Войдите снова.');
 }
@@ -68,6 +73,7 @@ document.addEventListener('visibilitychange', () => {
 
 function showLogin(message = '') {
   clearTimeout(idleTimer);
+  closeMenuEditor();
   $('#loginScreen').hidden = false;
   $('#adminDashboard').hidden = true;
   $('#logoutButton').hidden = true;
@@ -122,9 +128,21 @@ async function refreshDashboard() {
     fetchAllRows(() => client.from('orders').select('id,created_at,customer_name,phone,order_type,branch,address,comment,total,status,personal_data_consent,privacy_policy_version,order_items(item_name,unit_price,quantity)').order('created_at', {ascending: false}).order('id')),
     fetchAllRows(() => client.from('menu_items').select('*').order('sort_order').order('id')),
     loadRestaurantContacts(),
-    fetchAllRows(() => client.from('bookings').select('id,created_at,kind,customer_name,phone,guests,event_date,event_time,occasion,comment,status,personal_data_consent,privacy_policy_version').order('created_at', {ascending: false}).order('id'))
+    fetchAllRows(() => client.from('bookings').select('id,created_at,kind,customer_name,phone,guests,event_date,event_time,occasion,comment,status,personal_data_consent,privacy_policy_version').order('created_at', {ascending: false}).order('id')),
+    fetchAllRows(() => client.from('vacancies').select('id,title,salary,description,address,created_at').order('created_at', {ascending: false}).order('id'))
   ]);
   const failures = [];
+  if (results[4].status === 'fulfilled') {
+    vacancies = results[4].value;
+    $('#vacancyForm').querySelectorAll('input, select, textarea, button').forEach(element => { element.disabled = false; });
+    setFeedback($('#vacanciesFeedback'), '');
+  } else {
+    vacancies = [];
+    console.error('Не удалось загрузить вакансии.', results[4].reason);
+    failures.push('вакансии (проверьте миграцию адресов)');
+    $('#vacancyForm').querySelectorAll('input, select, textarea, button').forEach(element => { element.disabled = true; });
+    setFeedback($('#vacanciesFeedback'), 'Вакансии не загружены. Проверьте подключение и выполните vacancies-address-migration.sql в SQL Editor Supabase.');
+  }
   if (results[3].status === 'fulfilled') bookings = results[3].value;
   else {
     console.error('Не удалось загрузить бронирования.', results[3].reason);
@@ -147,11 +165,10 @@ async function refreshDashboard() {
     restaurantContacts = results[2].value;
     $('#contactsForm').elements.call_phone.value = restaurantContacts.call_phone;
     $('#contactsForm').elements.whatsapp_phone.value = restaurantContacts.whatsapp_phone;
-    $('#contactsForm').elements.max_phone.value = restaurantContacts.max_phone;
     $('#contactsForm').querySelectorAll('input, button').forEach(element => { element.disabled = false; });
     setFeedback($('#contactsFeedback'), '');
   } else {
-    console.error('Не удалось загрузить контакты ресторана.', results[2].reason);
+    console.error('Не удалось загрузить контакты чайханы.', results[2].reason);
     failures.push('контакты');
     $('#contactsForm').querySelectorAll('input, button').forEach(element => { element.disabled = true; });
     setFeedback($('#contactsFeedback'), 'Контакты не загружены. Выполните обновлённый файл supabase-schema.sql в SQL Editor Supabase.');
@@ -179,11 +196,11 @@ async function fetchAllRows(makeQuery) {
 
 async function loadRestaurantContacts() {
   const {data, error} = await client.from('restaurant_contacts')
-    .select('call_phone,whatsapp_phone,max_phone')
+    .select('call_phone,whatsapp_phone')
     .eq('id', true)
     .single();
   if (error) throw error;
-  if (!data) throw new Error('Контакты ресторана не найдены.');
+  if (!data) throw new Error('Контакты чайханы не найдены.');
   return data;
 }
 
@@ -313,8 +330,11 @@ function renderClients() {
 function renderMenu() {
   const categories = [...new Set(menuItems.map(item => item.category))].sort((a, b) => a.localeCompare(b, 'ru'));
   $('#menuCategories').innerHTML = categories.map(category => `<option value="${escapeHtml(category)}"></option>`).join('');
+  if (selectedMenuCategory && !categories.includes(selectedMenuCategory)) selectedMenuCategory = '';
+  const orderedCategories = [...menuCategoryOrder.filter(category => categories.includes(category)), ...categories.filter(category => !menuCategoryOrder.includes(category))];
+  $('#menuCategoryFilters').innerHTML = [{value: '', label: 'Все'}, ...orderedCategories.map(category => ({value: category, label: menuCategoryNames[category] || category}))].map(category => `<button class="admin-menu-category" type="button" data-menu-category="${escapeHtml(category.value)}" aria-pressed="${selectedMenuCategory === category.value}">${escapeHtml(category.label)}</button>`).join('');
   const query = $('#menuSearch').value.trim().toLocaleLowerCase('ru-RU');
-  const visibleItems = menuItems.filter(item => item.name.toLocaleLowerCase('ru-RU').includes(query));
+  const visibleItems = menuItems.filter(item => (!selectedMenuCategory || item.category === selectedMenuCategory) && item.name.toLocaleLowerCase('ru-RU').includes(query));
   $('#menuList').innerHTML = visibleItems.map(item => `<article class="admin-menu-item${item.available === false ? ' is-unavailable' : ''}">
     <img src="${escapeHtml(item.image_url || 'assets/brand-logo.webp')}" alt="" loading="lazy">
     <div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.category)} · ${escapeHtml(item.weight || 'Вес не указан')}</small></div>
@@ -323,8 +343,8 @@ function renderMenu() {
     <button class="admin-quiet-button" type="button" data-edit-menu="${Number(item.id)}">Изменить</button>
   </article>`).join('');
   $('#menuEmpty').hidden = visibleItems.length > 0;
-  $('#menuEmpty').textContent = menuItems.length ? 'Блюда с таким названием не найдены.' : 'Блюд пока нет. Добавьте позицию через кнопку «Добавить блюдо».';
-  $('#menuCount').textContent = query ? `Показано: ${visibleItems.length} из ${menuItems.length}.` : `Всего блюд: ${menuItems.length}.`;
+  $('#menuEmpty').textContent = menuItems.length ? 'В выбранной категории блюда не найдены. Измените поиск или категорию.' : 'Блюд пока нет. Добавьте позицию через кнопку «Добавить блюдо».';
+  $('#menuCount').textContent = query || selectedMenuCategory ? `Показано: ${visibleItems.length} из ${menuItems.length}.` : `Всего блюд: ${menuItems.length}.`;
 }
 
 function updateSelectionUi(kind, visibleKeys) {
@@ -363,7 +383,12 @@ async function deleteOrdersByIds(ids) {
   for (let index = 0; index < ids.length; index += 100) {
     const chunk = ids.slice(index, index + 100);
     const {data, error} = await client.from('orders').delete().in('id', chunk).select('id');
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42501' && /permission denied for table orders/i.test(error.message || '')) {
+        throw new Error('Нет права на удаление заказов. Выполните orders-delete-migration.sql в Supabase → SQL Editor.');
+      }
+      throw error;
+    }
     if ((data?.length || 0) !== chunk.length) throw new Error('База не разрешает удаление. Выполните в Supabase → SQL Editor команду из инструкции (политика Admins delete orders) и повторите.');
   }
 }
@@ -452,6 +477,18 @@ function renderAll() {
   renderBookings();
   renderClients();
   renderMenu();
+  renderVacancies();
+}
+
+function renderVacancies() {
+  const options = [...$('#vacancyForm').elements.address.options].map(option => ({value: option.value, label: option.textContent}));
+  $('#adminVacanciesList').innerHTML = vacancies.map(vacancy => `<article class="admin-vacancy-item"><div><b>${escapeHtml(vacancy.title)}</b>${vacancy.salary ? `<p>${escapeHtml(vacancy.salary)}</p>` : ''}<p>${escapeHtml(vacancy.description)}</p><form class="admin-vacancy-address" data-address-vacancy="${escapeHtml(vacancy.id)}"><label>Адрес работы<select name="address" required>${options.map(option => `<option value="${escapeHtml(option.value)}"${option.value === vacancy.address ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label><button class="admin-quiet-button" type="submit">Сохранить адрес</button></form></div><button class="admin-quiet-button" type="button" data-delete-vacancy="${escapeHtml(vacancy.id)}">Удалить</button></article>`).join('');
+  $('#adminVacanciesEmpty').hidden = vacancies.length > 0 || $('#vacancyForm').elements.title.disabled;
+}
+
+async function refreshVacancies() {
+  vacancies = await fetchAllRows(() => client.from('vacancies').select('id,title,salary,description,address,created_at').order('created_at', {ascending: false}).order('id'));
+  renderVacancies();
 }
 
 function openMenuEditor(item = null) {
@@ -548,6 +585,7 @@ $('#logoutButton').addEventListener('click', async () => {
   showLogin('Вы вышли из панели.');
   orders = [];
   menuItems = [];
+  vacancies = [];
   selectedOrders.clear();
   selectedClients.clear();
   renderAll();
@@ -555,14 +593,106 @@ $('#logoutButton').addEventListener('click', async () => {
 
 $('#refreshButton').addEventListener('click', refreshDashboard);
 $('#menuSearch').addEventListener('input', renderMenu);
+$('#menuCategoryFilters').addEventListener('click', event => {
+  const button = event.target.closest('[data-menu-category]');
+  if (!button) return;
+  selectedMenuCategory = button.dataset.menuCategory;
+  renderMenu();
+  [...$('#menuCategoryFilters').querySelectorAll('button')].find(item => item.dataset.menuCategory === selectedMenuCategory)?.focus();
+});
 document.querySelectorAll('.admin-tab').forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('.admin-tab').forEach(tab => {
     const selected = tab === button;
     tab.classList.toggle('active', selected);
     tab.setAttribute('aria-selected', String(selected));
   });
-  for (const panel of ['orders', 'bookings', 'clients', 'contacts', 'menu']) $(`#${panel}Panel`).hidden = button.dataset.tab !== panel;
+  for (const panel of ['orders', 'bookings', 'clients', 'contacts', 'menu', 'vacancies']) $(`#${panel}Panel`).hidden = button.dataset.tab !== panel;
 }));
+$('#vacancyForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const title = form.elements.title.value.trim();
+  const salary = form.elements.salary.value.trim();
+  const description = form.elements.description.value.trim();
+  const address = form.elements.address.value;
+  if (!title || !description || !address) {
+    setFeedback($('#vacanciesFeedback'), 'Укажите название, адрес и описание вакансии.');
+    return;
+  }
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  setFeedback($('#vacanciesFeedback'), '');
+  try {
+    const {error} = await client.from('vacancies').insert({title, salary, description, address});
+    if (error) throw error;
+    form.reset();
+    try {
+      await refreshVacancies();
+      setFeedback($('#vacanciesFeedback'), 'Вакансия добавлена на сайт.', true);
+    } catch (error) {
+      console.error('Вакансия добавлена, но список не обновился.', error);
+      setFeedback($('#vacanciesFeedback'), 'Вакансия добавлена, но список не обновился. Нажмите «Обновить данные».');
+    }
+  } catch (error) {
+    console.error('Не удалось добавить вакансию.', error);
+    setFeedback($('#vacanciesFeedback'), 'Не удалось добавить вакансию. Проверьте подключение и права владельца.');
+  } finally {
+    button.disabled = false;
+  }
+});
+$('#adminVacanciesList').addEventListener('submit', async event => {
+  const form = event.target.closest('[data-address-vacancy]');
+  if (!form) return;
+  event.preventDefault();
+  const vacancy = vacancies.find(item => item.id === form.dataset.addressVacancy);
+  const address = form.elements.address.value;
+  if (!vacancy || !address) {
+    setFeedback($('#vacanciesFeedback'), 'Выберите адрес работы.');
+    return;
+  }
+  const button = form.querySelector('button');
+  button.disabled = true;
+  setFeedback($('#vacanciesFeedback'), '');
+  try {
+    const {data, error} = await client.from('vacancies').update({address}).eq('id', vacancy.id).select('id,address');
+    if (error) throw error;
+    if (data.length !== 1) throw new Error('Адрес вакансии не был обновлён.');
+    vacancy.address = data[0].address;
+    setFeedback($('#vacanciesFeedback'), 'Адрес вакансии сохранён.', true);
+  } catch (error) {
+    console.error('Не удалось сохранить адрес вакансии.', error);
+    setFeedback($('#vacanciesFeedback'), 'Не удалось сохранить адрес вакансии. Проверьте подключение и права владельца.');
+  } finally {
+    button.disabled = false;
+  }
+});
+$('#adminVacanciesList').addEventListener('click', async event => {
+  const button = event.target.closest('[data-delete-vacancy]');
+  if (!button) return;
+  const vacancy = vacancies.find(item => item.id === button.dataset.deleteVacancy);
+  if (!vacancy || !window.confirm(`Удалить вакансию «${vacancy.title}» с сайта?`)) return;
+  button.disabled = true;
+  setFeedback($('#vacanciesFeedback'), '');
+  try {
+    const {data, error} = await client.from('vacancies').delete().eq('id', vacancy.id).select('id');
+    if (error) throw error;
+    if (!data.length) throw new Error('Вакансия не была удалена.');
+    try {
+      await refreshVacancies();
+      setFeedback($('#vacanciesFeedback'), 'Вакансия удалена с сайта.', true);
+    } catch (error) {
+      console.error('Вакансия удалена, но список не обновился.', error);
+      vacancies = vacancies.filter(item => item.id !== vacancy.id);
+      renderVacancies();
+      setFeedback($('#vacanciesFeedback'), 'Вакансия удалена, но список не обновился. Нажмите «Обновить данные».');
+    }
+  } catch (error) {
+    console.error('Не удалось удалить вакансию.', error);
+    setFeedback($('#vacanciesFeedback'), 'Не удалось удалить вакансию. Проверьте подключение и права владельца.');
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $('#bookingSearch').addEventListener('input', renderBookings);
 bindSelection('bookings', selectedBookings, 'bookingSelect', renderBookings, () => visibleBookings().map(row => row.id));
@@ -604,17 +734,15 @@ $('#contactsForm').addEventListener('submit', async event => {
     const {error} = await client.from('restaurant_contacts').update({
       call_phone: String(values.call_phone).trim(),
       whatsapp_phone: String(values.whatsapp_phone).trim(),
-      max_phone: String(values.max_phone).trim(),
       updated_at: new Date().toISOString()
     }).eq('id', true).select('id').single();
     if (error) throw error;
     restaurantContacts = {
       call_phone: String(values.call_phone).trim(),
       whatsapp_phone: String(values.whatsapp_phone).trim(),
-      max_phone: String(values.max_phone).trim()
     };
     $('#contactsForm').querySelectorAll('input, button').forEach(element => { element.disabled = false; });
-    setFeedback($('#contactsFeedback'), 'Контакты сохранены. Новые заказы и заявки будут направляться на эти номера.', true);
+    setFeedback($('#contactsFeedback'), 'Контакты сохранены. Telegram для заказов: @donishef.', true);
   } catch (error) {
     console.error('Не удалось сохранить контакты для заказов.', error);
     setFeedback($('#contactsFeedback'), 'Не удалось сохранить контакты. Проверьте подключение к базе и права владельца.');
