@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Авторизация через Firebase</title>
+
+  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js" type="module"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #6e8efb, #a777e3);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .wrapper {
+      background-color: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 450px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .form-container {
+      padding: 40px 30px;
+      transition: transform 0.5s ease;
+    }
+
+    .login-form {
+      transform: translateX(0);
+    }
+
+    .signup-form {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      transform: translateX(100%);
+      padding: 40px 30px;
+    }
+
+    .active .login-form {
+      transform: translateX(-100%);
+    }
+
+    .active .signup-form {
+      transform: translateX(0);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      border-color: #6e8efb;
+      box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.2);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background-color: #6e8efb;
+      color: white;
+      margin-bottom: 15px;
+    }
+
+    .btn-primary:hover {
+      background-color: #5a7dfa;
+    }
+
+    .btn-google {
+      background-color: white;
+      color: #333;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-google:hover {
+      background-color: #f5f5f5;
+    }
+
+    .google-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .toggle-form {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .toggle-link {
+      color: #6e8efb;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .toggle-link:hover {
+      text-decoration: underline;
+    }
+
+    .alert {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .alert-error {
+      background-color: #ffe6e6;
+      color: #d32f2f;
+      border: 1px solid #ffcdd2;
+    }
+
+    .alert-success {
+      background-color: #e8f5e9;
+      color: #388e3c;
+      border: 1px solid #c8e6c9;
+    }
+
+    /* Стили для игры */
+    .game-container {
+      display: none;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .game-title {
+      color: #6e8efb;
+      margin-bottom: 20px;
+    }
+
+    .score-container {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .clicker-button {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6e8efb, #a777e3);
+      border: none;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 20px auto;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      transition: transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clicker-button:active {
+      transform: scale(0.95);
+    }
+
+    .upgrades {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    .upgrade-btn {
+      background-color: #f0f0f0;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 15px;
+      margin: 5px;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 45%;
+    }
+
+    .upgrade-btn:hover {
+      background-color: #e0e0e0;
+    }
+
+    .upgrade-btn:disabled {
+      background-color: #f5f5f5;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    .upgrade-cost {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .logout-btn {
+      background-color: #f44336;
+      color: white;
+      margin-top: 20px;
+      width: auto;
+      padding: 10px 20px;
+    }
+
+    .logout-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    @media (max-width: 480px) {
+      .wrapper {
+        border-radius: 10px;
+      }
+      
+      .form-container {
+        padding: 30px 20px;
+      }
+      
+      h2 {
+        font-size: 22px;
+      }
+      
+      .clicker-button {
+        width: 150px;
+        height: 150px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper" id="formWrapper">
+    <div class="form-container">
+      <!-- Форма входа -->
+      <div class="login-form">
+        <h2>Вход в аккаунт</h2>
+        
+        <div id="loginAlert" class="alert alert-error"></div>
+        
+        <div class="input-group">
+          <input type="email" id="email" placeholder="Email" required>
+        </div>
+        
+        <div class="input-group">
+          <input type="password" id="password" placeholder="Пароль" required>
+        </div>
+        
+        <button id="loginBtn" class="btn-primary">Войти</button>
+        
+        <button id="googleBtn" class="btn-google">
+          <svg class="google-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Войти через Google
+        </button>
+        
+        <div class="toggle-form">
+          Нет аккаунта? <a class="toggle-link" id="showSignup">Зарегистрироваться</a>
+        </div>
+      </div>
+      
+      <!-- Форма регистрации -->
+      <div class="signup-form">
+        <h2>Регистрация</h2>
+        
+        <div id="signupAlert" class="alert alert-error"></div>
+        
+        <div class="input-group">
+          <input type="email" id="signupEmail" placeholder="Email" required>
+        </div>
+        
+        <div class="input-group">
+          <input type="password" id="signupPassword" placeholder="Пароль" required>
+        </div>
+        
+        <button id="signupBtn" class="btn-primary">Зарегистрироваться</button>
+        
+        <div class="toggle-form">
+          Уже есть аккаунт? <a class="toggle-link" id="showLogin">Войти</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Контейнер игры -->
+    <div class="game-container" id="gameContainer">
+      <h2 class="game-title">Игра: Кликер</h2>
+      <div class="score-container">
+        Очки: <span id="score">0</span>
+      </div>
+      <button class="clicker-button" id="clickerBtn">
+        Кликай!
+      </button>
+      <div class="upgrades">
+        <button class="upgrade-btn" id="upgrade1">
+          Улучшение 1<br>
+          <span class="upgrade-cost">Стоимость: 10 очков</span>
+        </button>
+        <button class="upgrade-btn" id="upgrade2">
+          Улучшение 2<br>
+          <span class="upgrade-cost">Стоимость: 50 очков</span>
+        </button>
+        <button class="upgrade-btn" id="upgrade3">
+          Улучшение 3<br>
+          <span class="upgrade-cost">Стоимость: 100 очков</span>
+        </button>
+        <button class="upgrade-btn" id="upgrade4">
+          Улучшение 4<br>
+          <span class="upgrade-cost">Стоимость: 200 очков</span>
+        </button>
+      </div>
+      <button class="logout-btn" id="logoutBtn">Выйти</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+
+    // Инициализация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyA54Rd0o2pTPqH5Ah-z573aG54JVEp9R90",
+      authDomain: "subhon-582fd.firebaseapp.com",
+      projectId: "subhon-582fd",
+      storageBucket: "subhon-582fd.firebasestorage.app",
+      messagingSenderId: "177549385549",
+      appId: "1:177549385549:web:3c4009b38a548439776104",
+      measurementId: "G-88VWE6YNZ4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+
+    // Элементы DOM
+    const formWrapper = document.getElementById('formWrapper');
+    const formContainer = document.querySelector('.form-container');
+    const gameContainer = document.getElementById('gameContainer');
+    const loginForm = document.querySelector('.login-form');
+    const signupForm = document.querySelector('.signup-form');
+    const loginAlert = document.getElementById('loginAlert');
+    const signupAlert = document.getElementById('signupAlert');
+    
+    // Элементы игры
+    const scoreElement = document.getElementById('score');
+    const clickerBtn = document.getElementById('clickerBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const upgradeButtons = [
+      document.getElementById('upgrade1'),
+      document.getElementById('upgrade2'),
+      document.getElementById('upgrade3'),
+      document.getElementById('upgrade4')
+    ];
+    
+    // Переменные игры
+    let score = 0;
+    let clickValue = 1;
+    const upgradeCosts = [10, 50, 100, 200];
+    const upgradeValues = [1, 5, 10, 20];
+    const upgradeLevels = [0, 0, 0, 0];
+    
+    // Переключение между формами
+    document.getElementById('showSignup').addEventListener('click', () => {
+      formWrapper.classList.add('active');
+      clearAlerts();
+    });
+    
+    document.getElementById('showLogin').addEventListener('click', () => {
+      formWrapper.classList.remove('active');
+      clearAlerts();
+    });
+    
+    // Функция очистки сообщений об ошибках
+    function clearAlerts() {
+      loginAlert.style.display = 'none';
+      signupAlert.style.display = 'none';
+    }
+    
+    // Функция показа ошибки
+    function showAlert(alertElement, message, isError = true) {
+      alertElement.textContent = message;
+      alertElement.className = isError ? 'alert alert-error' : 'alert alert-success';
+      alertElement.style.display = 'block';
+    }
+    
+    // Функция показа игры
+    function showGame() {
+      formContainer.style.display = 'none';
+      gameContainer.style.display = 'block';
+    }
+    
+    // Функция показа формы авторизации
+    function showAuthForm() {
+      formContainer.style.display = 'block';
+      gameContainer.style.display = 'none';
+    }
+    
+    // Проверка авторизации при загрузке
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Пользователь авторизован
+        showGame();
+      } else {
+        // Пользователь не авторизован
+        showAuthForm();
+      }
+    });
+
+    // Логика для входа по email/пароль
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      
+      if (!email || !password) {
+        showAlert(loginAlert, "Пожалуйста, заполните все поля");
+        return;
+      }
+      
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        showAlert(loginAlert, "Успешный вход! Загружаем игру...", false);
+        setTimeout(() => {
+          showGame();
+        }, 1000);
+      } catch (err) {
+        let errorMessage = "Ошибка входа";
+        if (err.code === 'auth/invalid-email') {
+          errorMessage = "Неверный формат email";
+        } else if (err.code === 'auth/user-not-found') {
+          errorMessage = "Пользователь с таким email не найден";
+        } else if (err.code === 'auth/wrong-password') {
+          errorMessage = "Неверный пароль";
+        } else if (err.code === 'auth/too-many-requests') {
+          errorMessage = "Слишком много попыток входа. Попробуйте позже";
+        }
+        showAlert(loginAlert, errorMessage);
+      }
+    });
+
+    // Логика для регистрации
+    document.getElementById("signupBtn").addEventListener("click", async () => {
+      const email = document.getElementById("signupEmail").value;
+      const password = document.getElementById("signupPassword").value;
+      
+      if (!email || !password) {
+        showAlert(signupAlert, "Пожалуйста, заполните все поля");
+        return;
+      }
+      
+      if (password.length < 6) {
+        showAlert(signupAlert, "Пароль должен содержать не менее 6 символов");
+        return;
+      }
+      
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        showAlert(signupAlert, "Регистрация успешна! Загружаем игру...", false);
+        setTimeout(() => {
+          showGame();
+        }, 1000);
+      } catch (err) {
+        let errorMessage = "Ошибка регистрации";
+        if (err.code === 'auth/email-already-in-use') {
+          errorMessage = "Пользователь с таким email уже существует";
+        } else if (err.code === 'auth/invalid-email') {
+          errorMessage = "Неверный формат email";
+        } else if (err.code === 'auth/weak-password') {
+          errorMessage = "Пароль слишком слабый";
+        }
+        showAlert(signupAlert, errorMessage);
+      }
+    });
+
+    // Логика для входа через Google
+    document.getElementById("googleBtn").addEventListener("click", async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        showGame();
+      } catch (err) {
+        showAlert(loginAlert, "Ошибка входа через Google");
+      }
+    });
+    
+    // Логика для выхода
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        showAuthForm();
+      } catch (err) {
+        console.error("Ошибка выхода:", err);
+      }
+    });
+    
+    // Логика игры
+    clickerBtn.addEventListener("click", () => {
+      score += clickValue;
+      updateScore();
+    });
+    
+    // Логика улучшений
+    upgradeButtons.forEach((button, index) => {
+      button.addEventListener("click", () => {
+        if (score >= upgradeCosts[index]) {
+          score -= upgradeCosts[index];
+          clickValue += upgradeValues[index];
+          upgradeLevels[index]++;
+          upgradeCosts[index] = Math.floor(upgradeCosts[index] * 1.5);
+          button.querySelector('.upgrade-cost').textContent = `Стоимость: ${upgradeCosts[index]} очков`;
+          updateScore();
+          updateUpgradeButtons();
+        }
+      });
+    });
+    
+    // Обновление отображения счета
+    function updateScore() {
+      scoreElement.textContent = score;
+    }
+    
+    // Обновление состояния кнопок улучшений
+    function updateUpgradeButtons() {
+      upgradeButtons.forEach((button, index) => {
+        button.disabled = score < upgradeCosts[index];
+      });
+    }
+    
+    // Инициализация игры
+    function initGame() {
+      score = 0;
+      clickValue = 1;
+      updateScore();
+      updateUpgradeButtons();
+    }
+    
+    // Инициализация игры при загрузке
+    initGame();
+  </script>
+</body>
+</html>
