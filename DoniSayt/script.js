@@ -1,8 +1,9 @@
 const asset = name => `assets/optimized/${name.replace(/\.jpg$/i, '.webp')}`;
+const plovPhotoUrl = image => /^assets\/optimized\/(?:samarkand|doni)-plov-[234]-dark\.webp$/.test(image) ? `${image}?v=2` : image;
 let restaurantContacts = {call_phone: '+79191545232', whatsapp_phone: '+79191545232'};
 let contactSettingsPromise = Promise.resolve();
 const TELEGRAM_ORDER_USERNAME = 'donishef';
-let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, available: item.available !== false}));
+let menu = window.DONISHEF_MENU_SEED.map(item => ({...item, image: plovPhotoUrl(item.image), available: item.available !== false}));
 let supabaseClient = null;
 let serverMenuReady = false;
 try {
@@ -379,31 +380,38 @@ function addPersonalDataConsent(form, insertBefore) {
 }
 const originalOrderSubmit = orderForm.querySelector('button[type="submit"]');
 addPersonalDataConsent(orderForm, originalOrderSubmit);
-const messengerFormActions = document.createElement('div');
-messengerFormActions.className = 'messenger-form-actions';
-[
-  {messenger: 'whatsapp', label: 'WhatsApp', className: 'btn btn-primary full'},
-  {messenger: 'telegram', label: 'Telegram', className: 'btn btn-outline full'}
-].forEach(({messenger, label, className}) => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.messenger = messenger;
-  button.className = `${className} messenger-submit`;
-  const footerLink = document.querySelector(`.site-footer .social-links a[title="${label}"]`);
-  const icon = footerLink.querySelector('svg').cloneNode(true);
-  const text = document.createElement('span');
-  text.textContent = label;
-  button.append(icon, text);
-  messengerFormActions.append(button);
-});
+function createMessengerButtons() {
+  const actions = document.createElement('div');
+  actions.className = 'messenger-form-actions';
+  [
+    {messenger: 'whatsapp', label: 'WhatsApp', className: 'btn btn-primary full'},
+    {messenger: 'telegram', label: 'Telegram', className: 'btn btn-outline full'}
+  ].forEach(({messenger, label, className}) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.messenger = messenger;
+    button.className = `${className} messenger-submit`;
+    const footerLink = document.querySelector(`.site-footer .social-links a[title="${label}"]`);
+    const icon = footerLink.querySelector('svg').cloneNode(true);
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.append(icon, text);
+    actions.append(button);
+  });
+  return actions;
+}
+function addModalSocialLinks(form) {
+  const links = form.querySelector('.modal-social-links');
+  const heading = document.createElement('span');
+  heading.className = 'modal-social-heading';
+  heading.textContent = 'Мы в соцсетях';
+  links.prepend(heading);
+  links.append(document.querySelector('.site-footer .social-links a[title="Instagram"]').cloneNode(true));
+}
+const messengerFormActions = createMessengerButtons();
 orderForm.insertBefore(messengerFormActions, originalOrderSubmit);
 originalOrderSubmit.remove();
-const orderSocialLinks = orderForm.querySelector('.modal-social-links');
-const socialHeading = document.createElement('span');
-socialHeading.className = 'modal-social-heading';
-socialHeading.textContent = 'Мы в соцсетях';
-orderSocialLinks.prepend(socialHeading);
-orderSocialLinks.append(document.querySelector('.site-footer .social-links a[title="Instagram"]').cloneNode(true));
+addModalSocialLinks(orderForm);
 orderForm.elements.name.maxLength = 120;
 orderForm.elements.address.maxLength = 300;
 orderForm.elements.comment.maxLength = 1000;
@@ -470,26 +478,10 @@ function closeOrderModal() {
   modal.classList.remove('show');
   cartButton.focus();
 }
-function showMessengerOptions(status, message, subject) {
-  const instructions = document.createElement('span');
-  instructions.textContent = `${subject} подготовлен. Выберите мессенджер, затем нажмите «Отправить» в открывшемся чате. До этого чайхана не получит сообщение.`;
-  const actions = document.createElement('span');
-  actions.className = 'messenger-actions';
-  const whatsappLink = document.createElement('a');
-  whatsappLink.className = 'btn btn-primary messenger-option';
-  whatsappLink.href = `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-  whatsappLink.target = '_blank';
-  whatsappLink.rel = 'noopener noreferrer';
-  whatsappLink.textContent = 'Отправить в WhatsApp';
-  const telegramLink = document.createElement('a');
-  telegramLink.className = 'btn btn-outline messenger-option';
-  telegramLink.href = `https://t.me/${TELEGRAM_ORDER_USERNAME}?text=${encodeURIComponent(message)}`;
-  telegramLink.target = '_blank';
-  telegramLink.rel = 'noopener noreferrer';
-  telegramLink.textContent = 'Отправить в Telegram';
-  actions.append(whatsappLink, telegramLink);
-  status.replaceChildren(instructions, actions);
-  status.hidden = false;
+function messengerUrl(messenger, message) {
+  return messenger === 'whatsapp'
+    ? `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+    : `https://t.me/${TELEGRAM_ORDER_USERNAME}?text=${encodeURIComponent(message)}`;
 }
 checkoutButton.onclick = () => {
   if (!cart.length) return alert('Сначала добавьте блюда в корзину.');
@@ -532,7 +524,7 @@ function buildOrderMessage(data, savedOrder) {
     data.get('orderType') === 'Доставка' ? `Адрес: ${data.get('address')}` : null,
     data.get('comment') ? `Комментарий: ${data.get('comment')}` : null
   ].filter(Boolean).join('\n');
-  return `Заказ ДониШеф\n\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}`;
+  return `Здравствуйте! Хочу оформить заказ.\n\nЗаказ ДониШеф\n\n${items}\n\nИтого: ${fmt(total)}\n\nИмя: ${data.get('name')}\nТелефон: ${data.get('phone')}\n${details}`;
 }
 async function saveRestaurantOrder(data) {
   if (!supabaseClient) {
@@ -608,10 +600,7 @@ orderForm.querySelectorAll('[data-messenger]').forEach(button => button.addEvent
     messengerButtons.forEach(messengerButton => { messengerButton.disabled = false; });
     return;
   }
-  const orderUrl = selectedMessenger === 'whatsapp'
-    ? `https://wa.me/${restaurantContacts.whatsapp_phone.replace(/\D/g, '')}?text=${encodeURIComponent(orderMessage)}`
-    : `https://t.me/${TELEGRAM_ORDER_USERNAME}?text=${encodeURIComponent(orderMessage)}`;
-  messengerWindow.location.replace(orderUrl);
+  messengerWindow.location.replace(messengerUrl(selectedMessenger, orderMessage));
   cart = [];
   saveCart();
   modal.classList.remove('show');
@@ -625,7 +614,8 @@ orderForm.querySelectorAll('[data-messenger]').forEach(button => button.addEvent
 const bookingModal = document.getElementById('bookingModal');
 const bookingForm = document.getElementById('bookingForm');
 addPersonalDataConsent(bookingForm, bookingForm.querySelector('.booking-submit-actions'));
-document.getElementById('bookingViaMax').textContent = 'Открыть WhatsApp / Telegram';
+document.getElementById('bookingViaMax').replaceWith(createMessengerButtons());
+addModalSocialLinks(bookingForm);
 const bookingPhoneInput = bookingForm.elements.phone;
 const closeBookingButton = document.getElementById('closeBookingModal');
 let bookingReturnFocus;
@@ -671,11 +661,12 @@ bookingModal.addEventListener('keydown', event => {
     first.focus();
   }
 });
-function buildBookingMessage() {
-  const data = new FormData(bookingForm);
+function buildBookingMessage(data) {
   const guests = Number(data.get('guests'));
   if (!Number.isInteger(guests) || guests < 1 || guests > 100) throw new RangeError('Количество гостей должно быть от 1 до 100.');
   return [
+    'Здравствуйте! Хочу забронировать стол.',
+    '',
     'Заявка на бронирование ДониШеф',
     `Имя: ${data.get('name')}`,
     `Телефон: ${data.get('phone')}`,
@@ -683,25 +674,45 @@ function buildBookingMessage() {
     `Дата: ${data.get('date')}`,
     `Время начала: ${data.get('time')}`,
     data.get('comment') ? `Пожелания: ${data.get('comment')}` : null,
-  ].filter(Boolean).join('\n');
+  ].filter(line => line !== null).join('\n');
 }
-document.getElementById('bookingViaMax').addEventListener('click', async () => {
+bookingForm.querySelectorAll('[data-messenger]').forEach(button => button.addEventListener('click', async event => {
   if (!bookingForm.reportValidity()) return;
-  const message = buildBookingMessage();
+  const data = new FormData(bookingForm);
+  const selectedMessenger = event.currentTarget.dataset.messenger;
+  const buttons = [...bookingForm.querySelectorAll('[data-messenger]')];
+  buttons.forEach(item => { item.disabled = true; });
+  const messengerWindow = window.open('about:blank', '_blank');
+  if (!messengerWindow) {
+    window.alert('Разрешите всплывающие окна для сайта, чтобы открыть мессенджер.');
+    buttons.forEach(item => { item.disabled = false; });
+    return;
+  }
+  messengerWindow.opener = null;
+  let message;
   try {
-    await saveBookingRequest('booking', new FormData(bookingForm));
+    message = buildBookingMessage(data);
+    await contactSettingsPromise;
+  } catch (error) {
+    console.error('Не удалось подготовить заявку на бронирование.', error);
+    messengerWindow.close();
+    window.alert('Не удалось подготовить заявку или загрузить контакты чайханы. Проверьте данные и подключение к интернету.');
+    buttons.forEach(item => { item.disabled = false; });
+    return;
+  }
+  try {
+    await saveBookingRequest('booking', data);
   } catch (error) {
     console.error('Не удалось сохранить бронирование в Supabase.', error);
+    window.alert('Не удалось сохранить бронирование в панели. Продолжите отправку через выбранный мессенджер и сообщите об этом владельцу.');
   }
-  try {
-    await contactSettingsPromise;
-    showMessengerOptions(document.getElementById('bookingMaxStatus'), message, 'Заявка');
-    document.getElementById('bookingMaxStatus').querySelector('a')?.focus();
-  } catch (error) {
-    console.error('Не удалось подготовить ссылки для заявки на бронирование.', error);
-    window.alert('Не удалось загрузить контакты чайханы. Проверьте подключение и попробуйте ещё раз.');
-  }
-});
+  messengerWindow.location.replace(messengerUrl(selectedMessenger, message));
+  bookingForm.reset();
+  bookingPhoneInput.value = '+7 (';
+  updateBookingPhoneValidity();
+  closeBookingModal();
+  buttons.forEach(item => { item.disabled = false; });
+}));
 async function saveBookingRequest(kind, data) {
   if (!supabaseClient) throw new Error('Онлайн-база не подключена.');
   const {data: result, error} = await supabaseClient.rpc('create_restaurant_booking', {
@@ -818,7 +829,7 @@ async function loadMenuFromSupabase() {
       price: row.price,
       weight: row.weight,
       desc: row.description,
-      image: row.image_url,
+      image: plovPhotoUrl(row.image_url),
       photo: row.photo,
       tag: row.tag || '',
       servingNote: row.serving_note || '',
